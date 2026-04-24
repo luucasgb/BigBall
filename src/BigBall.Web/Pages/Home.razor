@@ -1,0 +1,112 @@
+@page "/"
+@inject HomeViewModel VM
+@inject BigBall.Client.Core.Abstractions.ITokenStore TokenStore
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@implements IDisposable
+
+<Phone>
+    <div class="bb-header">
+        <div class="bb-header-title">Meus bolões</div>
+        <div class="bb-iconbtn"><Icon Path="@IconPaths.Bell" /></div>
+        <div class="bb-iconbtn"><Icon Path="@IconPaths.Plus" /></div>
+    </div>
+
+    <div class="bb-scroll" style="display:flex;flex-direction:column;gap:14px;">
+        @if (VM.FeaturedNextMatch is { } next && VM.FeaturedPool is { } featured)
+        {
+            <div class="bb-card" style="display:flex;flex-direction:column;gap:10px;cursor:pointer;"
+                 @onclick="() => VM.OpenFeaturedPredictionCommand.Execute(null)">
+                <div class="bb-row spread">
+                    <span class="bb-chip gold">Próximo jogo</span>
+                    <span class="bb-chip">@FormatKickoff(next.KickoffUtc)</span>
+                </div>
+                <div class="bb-row" style="justify-content:space-between;padding:8px 4px;">
+                    <div class="bb-row" style="gap:10px;">
+                        <Flag Code="@next.HomeCode" Size="36" />
+                        <span style="font-family:var(--font-display);font-weight:600;font-size:16px;">@next.HomeCode</span>
+                    </div>
+                    <span style="color:var(--fg-3);font-family:var(--font-display);font-size:16px;">×</span>
+                    <div class="bb-row" style="gap:10px;">
+                        <span style="font-family:var(--font-display);font-weight:600;font-size:16px;">@next.AwayCode</span>
+                        <Flag Code="@next.AwayCode" Size="36" />
+                    </div>
+                </div>
+                <div style="font-size:12px;color:var(--fg-2);">
+                    @(next.MyPrediction is null ? "Você ainda não palpitou em " : "Seu palpite ")
+                    <strong style="color:var(--fg);">@featured.Name</strong>
+                    @(next.MyPrediction is null ? "." : $": {next.MyPrediction.Home}–{next.MyPrediction.Away}.")
+                </div>
+            </div>
+        }
+
+        @if (VM.Pools.Count == 0 && !VM.IsBusy)
+        {
+            <div class="bb-empty">Você ainda não participa de nenhum bolão.</div>
+        }
+        else
+        {
+            @foreach (var pool in VM.Pools)
+            {
+                <div class="bb-card bb-pool-card" @onclick="() => OpenPool(pool)">
+                    <div class="bb-row spread">
+                        <div style="font-family:var(--font-display);font-weight:700;font-size:16px;">@pool.Name</div>
+                        <span class="bb-chip">@pool.MemberCount membros</span>
+                    </div>
+                    <div class="bb-row spread" style="margin-top:4px;">
+                        <div>
+                            <div style="font-size:11px;color:var(--fg-3);letter-spacing:0.04em;text-transform:uppercase;">Minha pos.</div>
+                            <div class="bb-big-num">#@pool.MyRank</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px;color:var(--fg-3);letter-spacing:0.04em;text-transform:uppercase;">Pontos</div>
+                            <div class="bb-big-num">@pool.MyPoints</div>
+                        </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--fg-2);">Líder: <strong style="color:var(--fg);">@pool.Leader.Name</strong> · @pool.Leader.Points pts</div>
+                </div>
+            }
+        }
+
+        @if (!string.IsNullOrEmpty(VM.ErrorMessage))
+        {
+            <div class="bb-error">@VM.ErrorMessage</div>
+        }
+    </div>
+
+    <BottomNav Active="home" />
+</Phone>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        VM.PropertyChanged += OnVmChanged;
+        ((System.Collections.Specialized.INotifyCollectionChanged)VM.Pools).CollectionChanged += OnPoolsChanged;
+
+        var token = await TokenStore.GetTokenAsync();
+        if (string.IsNullOrEmpty(token))
+        {
+            Nav.NavigateTo("/login", replace: true);
+            return;
+        }
+        await VM.LoadCommand.ExecuteAsync(null);
+    }
+
+    private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
+    private void OnPoolsChanged(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    private void OpenPool(MyPoolDto pool) => VM.OpenPoolCommand.Execute(pool);
+
+    private static string FormatKickoff(DateTime utc)
+    {
+        var delta = utc - DateTime.UtcNow;
+        if (delta <= TimeSpan.Zero) return "agora";
+        if (delta.TotalHours < 24) return $"em {(int)delta.TotalHours}h {delta.Minutes:D2}m";
+        return $"em {(int)delta.TotalDays}d";
+    }
+
+    public void Dispose()
+    {
+        VM.PropertyChanged -= OnVmChanged;
+        ((System.Collections.Specialized.INotifyCollectionChanged)VM.Pools).CollectionChanged -= OnPoolsChanged;
+    }
+}

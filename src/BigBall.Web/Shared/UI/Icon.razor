@@ -1,0 +1,14 @@
+@* Renders one of the icons declared in IconPaths.cs as an inline SVG. *@
+<svg width="@Size" height="@Size" viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="@StrokeWidth"
+     stroke-linecap="round" stroke-linejoin="round"
+     style="@Style">
+    @((MarkupString)Path)
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public string Path { get; set; } = string.Empty;
+    [Parameter] public int Size { get; set; } = 20;
+    [Parameter] public double StrokeWidth { get; set; } = 1.6;
+    [Parameter] public string? Style { get; set; }
+}

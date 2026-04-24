@@ -1,0 +1,224 @@
+/* BigBall.Web — global overrides + extensions beyond tokens.css */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #0f1822;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body.theme-dark {
+  color: #EAE0CF;
+}
+
+.bb-stage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.bb-splash {
+  color: #94B4C1;
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* error-ui */
+#blazor-error-ui {
+  background: #d48a7a;
+  color: #213448;
+  bottom: 0;
+  display: none;
+  left: 0;
+  padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+  position: fixed;
+  width: 100%;
+  z-index: 1000;
+  font-family: 'Inter', sans-serif;
+}
+#blazor-error-ui .dismiss {
+  cursor: pointer;
+  position: absolute;
+  right: 0.75rem;
+  top: 0.5rem;
+}
+
+button { font-family: inherit; }
+a { color: inherit; text-decoration: none; }
+
+/* segmented tabs */
+.bb-segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  border-radius: 12px;
+}
+.bb-segmented button {
+  flex: 1;
+  height: 34px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--fg-2);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.bb-segmented button.active {
+  background: var(--bg-elev-2);
+  color: var(--fg);
+}
+
+/* stepper */
+.bb-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bb-stepper button {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  color: var(--fg);
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.bb-stepper button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* row primitives */
+.bb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bb-row.spread { justify-content: space-between; }
+
+/* tier preview table */
+.bb-tier-table {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 6px 10px;
+  font-size: 12px;
+}
+.bb-tier-table .tier-pts {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--fg);
+  text-align: right;
+}
+.bb-tier-table .tier-row {
+  display: contents;
+  color: var(--fg-2);
+}
+.bb-tier-table .tier-row.highlight > * {
+  color: var(--brand-strong);
+}
+
+/* ranking list */
+.bb-rank-row {
+  display: grid;
+  grid-template-columns: 28px 28px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.bb-rank-row:last-child { border-bottom: none; }
+.bb-rank-row.me {
+  background: color-mix(in oklab, var(--brand-strong) 8%, transparent);
+  border-radius: 10px;
+  padding: 10px 10px;
+  margin: 4px -10px;
+}
+.bb-rank-pos {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--fg-2);
+  text-align: right;
+}
+.bb-rank-name { font-weight: 500; color: var(--fg); }
+.bb-rank-pts {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+
+.bb-alert {
+  border: 1px solid color-mix(in oklab, var(--warning) 40%, transparent);
+  background: color-mix(in oklab, var(--warning) 14%, transparent);
+  color: var(--warning);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.bb-empty {
+  text-align: center;
+  color: var(--fg-3);
+  font-size: 13px;
+  padding: 40px 12px;
+}
+
+.bb-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.bb-field-label {
+  font-size: 12px;
+  color: var(--fg-3);
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* pool card */
+.bb-pool-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.bb-pool-card:active { transform: scale(0.98); }
+
+.bb-big-num {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.bb-lock-countdown {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--warning);
+}
+.bb-lock-countdown.locked { color: var(--danger); }

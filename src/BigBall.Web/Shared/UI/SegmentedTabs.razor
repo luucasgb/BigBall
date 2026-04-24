@@ -1,0 +1,26 @@
+@typeparam T where T : notnull
+
+<div class="bb-segmented">
+    @foreach (var item in Items)
+    {
+        <button type="button"
+                class="@(EqualityComparer<T>.Default.Equals(item.Value, Selected) ? "active" : "")"
+                @onclick="() => OnSelect(item.Value)">
+            @item.Label
+        </button>
+    }
+</div>
+
+@code {
+    public record Item(T Value, string Label);
+
+    [Parameter, EditorRequired] public IReadOnlyList<Item> Items { get; set; } = Array.Empty<Item>();
+    [Parameter] public T Selected { get; set; } = default!;
+    [Parameter] public EventCallback<T> SelectedChanged { get; set; }
+
+    private Task OnSelect(T value)
+    {
+        Selected = value;
+        return SelectedChanged.InvokeAsync(value);
+    }
+}

@@ -1,0 +1,130 @@
+@page "/pools/{PoolId:guid}/predict/{MatchId:guid}"
+@inject PredictViewModel VM
+@implements IDisposable
+
+<Phone>
+    <div class="bb-header">
+        <div class="bb-iconbtn" @onclick="() => VM.GoBackCommand.Execute(null)"><Icon Path="@IconPaths.ChevronL" /></div>
+        <div class="bb-header-title">Palpite</div>
+        @if (VM.IsLocked)
+        {
+            <span class="bb-chip live">Bloqueado</span>
+        }
+        else
+        {
+            <span class="bb-chip" style="font-variant-numeric:tabular-nums;">
+                <Icon Path="@IconPaths.Lock" Size="12" /> @FormatCountdown(VM.SecondsUntilLock)
+            </span>
+        }
+    </div>
+
+    <div class="bb-scroll" style="display:flex;flex-direction:column;gap:14px;">
+        @if (VM.Match is { } match)
+        {
+            <div class="bb-card" style="display:flex;flex-direction:column;gap:8px;">
+                <div class="bb-row spread">
+                    <span class="bb-chip">@(match.GroupLabel ?? match.Phase)</span>
+                    <span class="bb-chip">@match.KickoffUtc.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                </div>
+                <div class="bb-row" style="justify-content:space-between;padding:8px 4px;">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+                        <Flag Code="@match.HomeCode" Size="44" />
+                        <span style="font-family:var(--font-display);font-weight:600;font-size:15px;">@match.HomeCode</span>
+                    </div>
+                    <div style="color:var(--fg-3);font-family:var(--font-display);font-size:20px;">×</div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+                        <Flag Code="@match.AwayCode" Size="44" />
+                        <span style="font-family:var(--font-display);font-weight:600;font-size:15px;">@match.AwayCode</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bb-card" style="display:flex;flex-direction:column;gap:16px;">
+                <div class="bb-field-label">Seu palpite</div>
+                <div class="bb-row" style="justify-content:space-between;align-items:center;gap:10px;">
+                    <ScoreStepper Value="@VM.HomePrediction"
+                                  ValueChanged="v => VM.HomePrediction = v"
+                                  Disabled="@(VM.IsLocked || VM.IsBusy)" />
+                    <div style="color:var(--fg-3);font-family:var(--font-display);font-size:20px;">×</div>
+                    <ScoreStepper Value="@VM.AwayPrediction"
+                                  ValueChanged="v => VM.AwayPrediction = v"
+                                  Disabled="@(VM.IsLocked || VM.IsBusy)" />
+                </div>
+
+                @if (VM.Preview is { } preview)
+                {
+                    <div style="font-size:12px;color:var(--fg-2);">
+                        Contra resultado @match.ReferenceHome–@match.ReferenceAway:
+                        <strong style="color:var(--brand-strong);font-family:var(--font-display);font-size:15px;">
+                            @preview.Total pts
+                        </strong>
+                        (faixa @preview.Tier@(preview.Bonus > 0 ? $" + bônus {preview.Bonus}" : ""))
+                    </div>
+                }
+                else if (match.ReferenceHome is null || match.ReferenceAway is null)
+                {
+                    <div style="font-size:12px;color:var(--fg-3);">
+                        Resultado de referência ainda não informado — sem preview.
+                    </div>
+                }
+            </div>
+
+            <div class="bb-card">
+                <div class="bb-field-label">Tabela de pontuação (PRD 4.8)</div>
+                <div class="bb-tier-table">
+                    <div class="bb-tier-row"><span class="tier-pts">20</span><span>Placar exato</span><span></span></div>
+                    <div class="bb-tier-row"><span class="tier-pts">16</span><span>Vencedor + diferença (ou empate c/ placar errado)</span><span></span></div>
+                    <div class="bb-tier-row"><span class="tier-pts">15</span><span>Vencedor + um lado</span><span></span></div>
+                    <div class="bb-tier-row"><span class="tier-pts">10</span><span>Vencedor certo</span><span></span></div>
+                    <div class="bb-tier-row"><span class="tier-pts">5</span><span>Um lado certo</span><span></span></div>
+                    <div class="bb-tier-row"><span class="tier-pts">0</span><span>Nada acertado</span><span></span></div>
+                    <div class="bb-tier-row"><span class="tier-pts">+3</span><span>Bônus pênalti (mata-mata)</span><span></span></div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(VM.ErrorMessage))
+            {
+                <div class="bb-error">@VM.ErrorMessage</div>
+            }
+
+            <button class="bb-btn bb-btn-primary" type="button"
+                    disabled="@(!VM.SaveCommand.CanExecute(null) || VM.IsBusy)"
+                    @onclick="() => VM.SaveCommand.ExecuteAsync(null)">
+                @(VM.IsSaved ? "Atualizar palpite" : "Salvar palpite")
+            </button>
+        }
+        else if (VM.IsBusy)
+        {
+            <div class="bb-empty">Carregando…</div>
+        }
+    </div>
+</Phone>
+
+@code {
+    [Parameter] public Guid PoolId { get; set; }
+    [Parameter] public Guid MatchId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (VM.PoolId == PoolId && VM.MatchId == MatchId) return;
+        VM.PropertyChanged += OnVmChanged;
+        VM.PoolId = PoolId;
+        VM.MatchId = MatchId;
+        await VM.LoadCommand.ExecuteAsync(null);
+    }
+
+    private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    private static string FormatCountdown(int seconds)
+    {
+        var t = TimeSpan.FromSeconds(seconds);
+        return t.TotalHours >= 1 ? $"{(int)t.TotalHours:D2}:{t.Minutes:D2}:{t.Seconds:D2}"
+                                 : $"{t.Minutes:D2}:{t.Seconds:D2}";
+    }
+
+    public void Dispose()
+    {
+        VM.PropertyChanged -= OnVmChanged;
+        VM.Dispose();
+    }
+}

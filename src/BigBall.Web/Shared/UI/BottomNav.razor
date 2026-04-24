@@ -1,0 +1,24 @@
+@* Four-tab bottom bar (Bolões / Calendário / Descobrir / Perfil). *@
+<div class="bb-bottomnav">
+    @foreach (var tab in Tabs)
+    {
+        <div class="bb-tab @(tab.Id == Active ? "active" : "")">
+            <Icon Path="@tab.Path" Size="22" />
+            <span>@tab.Label</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Active { get; set; } = "home";
+
+    private record Tab(string Id, string Label, string Path);
+
+    private static readonly Tab[] Tabs =
+    {
+        new("home",      "Bolões",     IconPaths.Trophy),
+        new("calendar",  "Calendário", IconPaths.Calendar),
+        new("discover",  "Descobrir",  IconPaths.Globe),
+        new("profile",   "Perfil",     IconPaths.User),
+    };
+}

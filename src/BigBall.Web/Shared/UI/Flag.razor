@@ -1,0 +1,61 @@
+@* Two-tone flag placeholder with the country code overlaid. *@
+<div style="@Style">@Code</div>
+
+@code {
+    [Parameter, EditorRequired] public string Code { get; set; } = "—";
+    [Parameter] public int Size { get; set; } = 28;
+    [Parameter] public bool Round { get; set; } = true;
+
+    private static readonly IReadOnlyDictionary<string, (string A, string B)> Palette =
+        new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["BRA"] = ("#009739", "#FEDF00"),
+            ["ARG"] = ("#75AADB", "#ffffff"),
+            ["FRA"] = ("#0055A4", "#EF4135"),
+            ["GER"] = ("#000000", "#DD0000"),
+            ["ESP"] = ("#AA151B", "#F1BF00"),
+            ["ENG"] = ("#ffffff", "#CE1124"),
+            ["POR"] = ("#006600", "#FF0000"),
+            ["NED"] = ("#AE1C28", "#21468B"),
+            ["MEX"] = ("#006847", "#CE1126"),
+            ["USA"] = ("#3C3B6E", "#B22234"),
+            ["CAN"] = ("#D80621", "#ffffff"),
+            ["URU"] = ("#7B9FD1", "#ffffff"),
+            ["CRO"] = ("#171796", "#ff0000"),
+            ["ITA"] = ("#008C45", "#CD212A"),
+            ["JPN"] = ("#BC002D", "#ffffff"),
+            ["KOR"] = ("#CD2E3A", "#0047A0"),
+            ["BEL"] = ("#000000", "#FAE042"),
+            ["SUI"] = ("#DA291C", "#ffffff"),
+            ["MAR"] = ("#C1272D", "#006233"),
+            ["SEN"] = ("#00853F", "#FDEF42"),
+            ["AUS"] = ("#00843D", "#FFCD00"),
+        };
+
+    private string Style
+    {
+        get
+        {
+            var (a, b) = Palette.TryGetValue(Code, out var found) ? found : ("#4a5a6a", "#2a3542");
+            var radius = Round ? "50%" : $"{Size * 0.18:F0}px";
+            var fontSize = (Size * 0.32).ToString("F0");
+            return string.Join(';',
+                $"width:{Size}px",
+                $"height:{Size}px",
+                $"border-radius:{radius}",
+                $"background:linear-gradient(135deg,{a} 50%,{b} 50%)",
+                "display:flex",
+                "align-items:center",
+                "justify-content:center",
+                "flex-shrink:0",
+                "overflow:hidden",
+                "box-shadow:inset 0 0 0 1px rgba(0,0,0,0.12)",
+                $"font-size:{fontSize}px",
+                "font-weight:700",
+                "color:rgba(255,255,255,0.95)",
+                "text-shadow:0 1px 1px rgba(0,0,0,0.35)",
+                "letter-spacing:-0.02em",
+                "font-family:var(--font-display)");
+        }
+    }
+}

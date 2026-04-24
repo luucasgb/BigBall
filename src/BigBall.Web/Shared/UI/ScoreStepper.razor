@@ -1,0 +1,28 @@
+@* Large numeric stepper with +/- buttons (0–20). *@
+<div class="bb-stepper">
+    <button type="button" @onclick="OnDecrement" disabled="@Disabled">−</button>
+    <ScoreBox Value="@Value" Editable="true" Size="lg" />
+    <button type="button" @onclick="OnIncrement" disabled="@Disabled">+</button>
+</div>
+
+@code {
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public int Min { get; set; } = 0;
+    [Parameter] public int Max { get; set; } = 20;
+
+    private Task OnDecrement()
+    {
+        if (Value <= Min) return Task.CompletedTask;
+        Value--;
+        return ValueChanged.InvokeAsync(Value);
+    }
+
+    private Task OnIncrement()
+    {
+        if (Value >= Max) return Task.CompletedTask;
+        Value++;
+        return ValueChanged.InvokeAsync(Value);
+    }
+}

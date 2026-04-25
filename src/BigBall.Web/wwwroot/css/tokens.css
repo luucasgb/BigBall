@@ -258,3 +258,4 @@
 }
 .bb-tab.active { color: var(--fg); }
 .bb-tab.active svg { color: var(--brand-strong); }
+.bb-tab.disabled { cursor: default; opacity: 0.35; pointer-events: none; }

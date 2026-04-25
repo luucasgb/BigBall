@@ -81,3 +81,6 @@ wwwroot/_framework/
 
 # big-ball-handoff.zip
 Big Ball-handoff.zip
+
+# Claude local files
+./claude

@@ -89,6 +89,12 @@
             return;
         }
         await VM.LoadCommand.ExecuteAsync(null);
+
+        // Token may have been cleared by AuthMessageHandler on 401
+        if (VM.ErrorMessage is not null && string.IsNullOrEmpty(await TokenStore.GetTokenAsync()))
+        {
+            Nav.NavigateTo("/login", replace: true);
+        }
     }
 
     private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);

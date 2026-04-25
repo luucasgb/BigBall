@@ -25,6 +25,14 @@ public sealed class AuthMessageHandler : DelegatingHandler
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
-        return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await _tokens.ClearAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return response;
     }
 }

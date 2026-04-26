@@ -81,3 +81,6 @@ wwwroot/_framework/
 
 # Claude local files
 .claude/
+
+# Cursor local files
+.cursor/

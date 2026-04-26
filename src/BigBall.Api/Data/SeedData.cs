@@ -19,6 +19,8 @@ public static class SeedData
     private static readonly Guid FamiliaPoolId = new("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
     private static readonly Guid TrampoPoolId  = new("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
 
+    private static readonly Guid ArgMexId       = new("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
     public static void Populate(InMemoryStore store)
     {
         SeedProfiles(store);
@@ -139,7 +141,7 @@ public static class SeedData
         AddMatch(s, MatchPhase.Groups, "C", "FRA", "AUS", now.AddDays(-1), status: MatchStatus.Finished, refH: 3, refA: 0);
 
         // Próximas (≈ 1h 47m): ARG×MEX, BRA×SUI
-        AddMatch(s, MatchPhase.Groups, "A", "ARG", "MEX", now.AddMinutes(107));
+        AddMatch(s, MatchPhase.Groups, "A", "ARG", "MEX", now.AddMinutes(107), id: ArgMexId);
         AddMatch(s, MatchPhase.Groups, "B", "BRA", "SUI", now.AddMinutes(107).AddHours(3));
 
         // Já bloqueada (kickoff no passado em 10 min)
@@ -150,12 +152,13 @@ public static class SeedData
         AddMatch(s, MatchPhase.Groups, "F", "ESP", "URU", now.AddDays(5));
 
         static void AddMatch(InMemoryStore s, MatchPhase phase, string? group, string home, string away,
-            DateTime kickoff, MatchStatus status = MatchStatus.Scheduled, int? refH = null, int? refA = null)
+            DateTime kickoff, MatchStatus status = MatchStatus.Scheduled, int? refH = null, int? refA = null,
+            Guid? id = null)
         {
-            var id = Guid.NewGuid();
-            s.Matches.TryAdd(id, new Match
+            var matchId = id ?? Guid.NewGuid();
+            s.Matches.TryAdd(matchId, new Match
             {
-                Id = id,
+                Id = matchId,
                 Phase = phase,
                 GroupLabel = group is null ? null : $"Grupo {group}",
                 HomeCode = home,

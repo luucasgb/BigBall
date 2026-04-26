@@ -1,0 +1,21 @@
+@* Column shell for the fixed desktop left navigation: flex column, border, background. *@
+
+<aside class="sidebar-frame">
+    @ChildContent
+</aside>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
+<style>
+    .sidebar-frame {
+        background: color-mix(in oklab, var(--bg) 92%, #000);
+        border-right: 1px solid var(--line);
+        padding: 28px 18px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow: hidden;
+    }
+</style>

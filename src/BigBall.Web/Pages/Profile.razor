@@ -1,4 +1,5 @@
 @page "/profile"
+@inject IAuthSession AuthSession
 
 <div class="bb-desk theme-dark">
     <Sidebar Active="profile" />
@@ -6,8 +7,10 @@
         <DesktopTopbar Placeholder="Buscar membros, partidas, palpites…" />
 
         <PageHeader Title="Perfil" Eyebrow="Conta">
-            <button class="bb-topbar-btn"><Icon Path="@IconPaths.Share" Size="16" /> Compartilhar</button>
-            <button class="bb-topbar-btn primary"><Icon Path="@IconPaths.Pen" Size="16" /> Editar</button>
+            <Actions>
+                <button class="bb-topbar-btn"><Icon Path="@IconPaths.Share" Size="16" /> Compartilhar</button>
+                <button class="bb-topbar-btn primary"><Icon Path="@IconPaths.Pen" Size="16" /> Editar</button>
+            </Actions>
         </PageHeader>
 
         <div class="bb-content">
@@ -53,7 +56,10 @@
                         Title="Conta"
                         Items="@AccountSettingsItems" />
 
-                    <button class="bb-btn bb-btn-ghost logout-btn">
+                    <button type="button"
+                            class="bb-btn bb-btn-ghost logout-btn"
+                            disabled="@_loggingOut"
+                            @onclick="LogoutAsync">
                         Sair da conta
                     </button>
                 </div>
@@ -63,6 +69,22 @@
 </div>
 
 @code {
+    private bool _loggingOut;
+
+    private async Task LogoutAsync()
+    {
+        if (_loggingOut) return;
+        _loggingOut = true;
+        try
+        {
+            await AuthSession.LogoutAsync();
+        }
+        finally
+        {
+            _loggingOut = false;
+        }
+    }
+
     private const string ProfileName   = "João Pereira";
     private const string ProfileHandle = "@joao.pereira";
     private const string ProfileEmail  = "joao.pereira@gmail.com";

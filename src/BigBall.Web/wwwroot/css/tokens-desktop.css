@@ -16,16 +16,7 @@
 }
 .bb-desk * { box-sizing: border-box; }
 
-/* ─── Sidebar ──────────────────────────────────────────────── */
-.bb-sidebar {
-  background: color-mix(in oklab, var(--bg) 92%, #000);
-  border-right: 1px solid var(--line);
-  padding: 28px 18px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  overflow: hidden;
-}
+/* ─── Sidebar (layout pieces live in Shared/UI: SidebarFrame, SidebarNavSection) ─ */
 .bb-logo {
   display: flex; align-items: center; gap: 12px;
   padding: 4px 8px 18px;
@@ -41,12 +32,6 @@
 .bb-logo-text {
   font-family: var(--font-display);
   font-size: 22px; font-weight: 700; letter-spacing: -0.03em;
-}
-.bb-nav-section {
-  font-size: 10px; color: var(--fg-3);
-  letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 16px 10px 8px;
-  font-weight: 600;
 }
 .bb-nav-item {
   display: flex; align-items: center; gap: 12px;

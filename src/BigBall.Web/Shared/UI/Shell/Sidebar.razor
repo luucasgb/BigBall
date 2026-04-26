@@ -1,0 +1,41 @@
+@* Fixed left-nav sidebar shared across all desktop screens. *@
+
+<SidebarFrame>
+    <div class="bb-logo">
+        <div class="bb-logo-mark">
+            <Icon Path="@IconPaths.Trophy" Size="20" />
+        </div>
+        <div class="bb-logo-text">BigBall</div>
+    </div>
+
+    <SidebarNavSection>Bolões</SidebarNavSection>
+    <SidebarNavItem IconPath="@IconPaths.Home"
+                    Label="Início"
+                    Href="/"
+                    IsActive="@(Active == "dashboard")" />
+    <SidebarNavItem IconPath="@IconPaths.Calendar"
+                    Label="Calendário"
+                    Href="/calendar"
+                    IsActive="@(Active == "calendar")" />
+    <SidebarNavItem IconPath="@IconPaths.Whistle"
+                    Label="Palpitar"
+                    Href="/pools/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1/predict/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                    IsActive="@(Active == "predict")" />
+    <SidebarNavItem IconPath="@IconPaths.Globe"
+                    Label="Descobrir"
+                    Title="Em breve" />
+
+    <SidebarNavSection>Conta</SidebarNavSection>
+    <SidebarNavItem IconPath="@IconPaths.User"
+                    Label="Perfil"
+                    Href="/profile"
+                    IsActive="@(Active == "profile")" />
+
+    <SidebarUserFooter Name="@UserName" Email="@UserEmail" />
+</SidebarFrame>
+
+@code {
+    [Parameter] public string Active { get; set; } = string.Empty;
+    [Parameter] public string UserName { get; set; } = "João Pereira";
+    [Parameter] public string UserEmail { get; set; } = "joao.pereira@gmail.com";
+}

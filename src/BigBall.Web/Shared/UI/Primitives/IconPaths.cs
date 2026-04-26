@@ -19,6 +19,7 @@ public static class IconPaths
     public const string Check    = "<path d=\"m5 12 5 5L20 7\"/>";
     public const string Dots     = "<circle cx=\"5\" cy=\"12\" r=\"1.3\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.3\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.3\" fill=\"currentColor\"/>";
     public const string Users    = "<circle cx=\"9\" cy=\"8\" r=\"3.5\"/><path d=\"M3 20a6 6 0 0 1 12 0\"/><circle cx=\"17\" cy=\"9\" r=\"2.5\"/><path d=\"M15 20a5 5 0 0 1 6-4\"/>";
+    public const string LogOut   = "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"M16 17l5-5-5-5\"/><path d=\"M21 12H9\"/>";
     public const string Lock     = "<rect x=\"5\" y=\"11\" width=\"14\" height=\"9\" rx=\"2\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>";
     public const string Globe    = "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18\"/>";
     public const string Share    = "<path d=\"M16 6l-4-3-4 3\"/><path d=\"M12 3v12\"/><path d=\"M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7\"/>";

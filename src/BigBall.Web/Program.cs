@@ -15,5 +15,6 @@ var apiBase = new Uri(builder.Configuration["ApiBase"]
 builder.Services.AddBigBallClientCore(apiBase);
 builder.Services.AddScoped<ITokenStore, LocalStorageTokenStore>();
 builder.Services.AddScoped<IAppNavigator, BlazorAppNavigator>();
+builder.Services.AddScoped<IAuthSession, WebAuthSession>();
 
 await builder.Build().RunAsync();

@@ -1,6 +1,7 @@
 using BigBall.Api.Auth;
 using BigBall.Api.Data;
 using BigBall.Domain.Entities;
+using BigBall.Domain.Enums;
 using BigBall.Shared.Dtos;
 
 namespace BigBall.Api.Endpoints;
@@ -35,6 +36,10 @@ public static class AuthEndpoints
                 store.Profiles.TryAdd(profile.Id, profile);
             }
 
+            // Stub: every logged-in user must belong to at least the two seeded pools so screens like
+            // /predict (which calls /api/pools/mine) always have bolões for local development.
+            EnsureStubDefaultPoolMemberships(store, profile.Id);
+
             var token = issuer.Issue(profile.Id, profile.Email, profile.DisplayName);
             return Results.Ok(new LoginResponse(
                 token,
@@ -44,6 +49,33 @@ public static class AuthEndpoints
         .WithName("Login");
 
         return app;
+    }
+
+    private static void EnsureStubDefaultPoolMemberships(InMemoryStore store, Guid userId)
+    {
+        if (store.MembershipsOf(userId).Any())
+        {
+            return;
+        }
+
+        var joined = DateTime.UtcNow;
+        foreach (var poolId in new[] { SeedData.FamiliaPoolId, SeedData.TrampoPoolId })
+        {
+            if (!store.Pools.ContainsKey(poolId))
+            {
+                continue;
+            }
+
+            var id = Guid.NewGuid();
+            store.Memberships.TryAdd(id, new PoolMembership
+            {
+                Id = id,
+                PoolId = poolId,
+                UserId = userId,
+                Role = MembershipRole.Member,
+                JoinedUtc = joined
+            });
+        }
     }
 
     private static string DeriveDisplayName(string email)

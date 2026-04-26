@@ -16,8 +16,9 @@ public static class SeedData
     private static readonly Guid CarlaId = new("44444444-4444-4444-4444-444444444444");
     private static readonly Guid DiegoId = new("55555555-5555-5555-5555-555555555555");
 
-    private static readonly Guid FamiliaPoolId = new("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
-    private static readonly Guid TrampoPoolId  = new("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
+    /// <summary>Used by stub auth to enroll new users; same ids as <see cref="SeedPools"/>.</summary>
+    public static readonly Guid FamiliaPoolId = new("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
+    public static readonly Guid TrampoPoolId  = new("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
 
     private static readonly Guid ArgMexId       = new("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 

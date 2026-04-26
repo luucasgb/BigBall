@@ -1,0 +1,24 @@
+<div class="pool-selector">
+    <div class="pool-selector-label">Salvar em qual bolão?</div>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
+<style>
+    .pool-selector {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pool-selector-label {
+        font-size: 11px;
+        color: var(--fg-3);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+</style>

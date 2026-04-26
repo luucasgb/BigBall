@@ -1,0 +1,43 @@
+<div class="match-list-panel bb-dcard">
+    <div class="match-list-panel-header">
+        <div class="bb-dcard-title">@Title</div>
+        <span class="match-list-panel-subtitle">@Subtitle</span>
+    </div>
+    <div class="match-list-panel-body">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Subtitle { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
+<style>
+    .match-list-panel {
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .match-list-panel-header {
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        flex-shrink: 0;
+    }
+
+    .match-list-panel-subtitle {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--fg-2);
+    }
+
+    .match-list-panel-body {
+        overflow-y: auto;
+        flex: 1;
+    }
+</style>

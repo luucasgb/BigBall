@@ -18,134 +18,72 @@
             </div>
         </div>
 
-        <div style="padding:0 40px 20px;display:flex;gap:8px;">
-            @foreach (var day in Days)
-            {
-                var isActive = day.Label == SelectedDay;
-                <div style="flex:1;padding:14px 16px;border-radius:12px;background:@(isActive ? "var(--brand-strong)" : "var(--bg-elev)");border:1px solid @(isActive ? "var(--brand-strong)" : "var(--line)");color:@(isActive ? "var(--brand-ink)" : "var(--fg)");cursor:pointer;"
-                     @onclick="() => SelectedDay = day.Label">
-                    <div style="font-size:11px;opacity:0.7;letter-spacing:0.06em;font-weight:500;">@day.DayName</div>
-                    <div style="font-family:var(--font-display);font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-top:2px;">@day.DayNum</div>
-                    <div style="font-size:11px;opacity:0.7;margin-top:4px;">@day.MatchCount jogos</div>
-                </div>
-            }
-        </div>
+        <DayPicker Items="@Days.Select(d => new DayPicker.DayPickerItem(d.DayName, d.DayNum, d.Label, d.MatchCount)).ToList()"
+                   Selected="@SelectedDay"
+                   SelectedChanged="d => SelectedDay = d" />
 
-        <div style="flex:1;padding:0 40px 40px;display:grid;grid-template-columns:1.1fr 1fr;gap:20px;min-height:0;overflow:hidden;">
+        <div class="calendar-layout">
 
-            <div class="bb-dcard" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">
-                <div style="padding:14px 20px;display:flex;align-items:center;border-bottom:1px solid var(--line);flex-shrink:0;">
-                    <div class="bb-dcard-title">Jogos · 14 jun</div>
-                    <span style="margin-left:auto;font-size:12px;color:var(--fg-2);">4 jogos · 1 ao vivo</span>
-                </div>
-                <div style="overflow-y:auto;flex:1;">
-                    @foreach (var (match, idx) in Matches.Select((m, i) => (m, i)))
-                    {
-                        var isSelected = match.IsSelected;
-                        <div style="padding:16px 20px;display:flex;align-items:center;gap:16px;border-bottom:@(idx < Matches.Count - 1 ? "1px solid var(--line)" : "none");background:@(isSelected ? "color-mix(in oklab, var(--brand-strong) 8%, transparent)" : "transparent");border-left:3px solid @(isSelected ? "var(--brand-strong)" : "transparent");cursor:pointer;"
-                             @onclick="() => SelectMatch(match)">
-                            <div style="width:50px;font-family:var(--font-display);font-weight:600;font-size:16px;font-variant-numeric:tabular-nums;">
-                                @match.Time
-                                <div style="font-size:10px;font-family:var(--font-sans);font-weight:500;color:var(--fg-3);letter-spacing:0.04em;margin-top:2px;">@match.Phase</div>
-                            </div>
-                            <div style="flex:1;min-width:0;">
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <Flag Code="@match.HomeCode" Size="24" />
-                                    <div style="font-size:14px;font-weight:500;flex:1;">@match.HomeName</div>
-                                    @if (match.Status == "live") { <span style="font-family:var(--font-display);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;">@match.LiveHome</span> }
-                                    @if (match.Status == "pred") { <span style="color:var(--fg-3);font-variant-numeric:tabular-nums;font-size:13px;">@match.PredHome</span> }
-                                </div>
-                                <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
-                                    <Flag Code="@match.AwayCode" Size="24" />
-                                    <div style="font-size:14px;font-weight:500;flex:1;">@match.AwayName</div>
-                                    @if (match.Status == "live") { <span style="font-family:var(--font-display);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;">@match.LiveAway</span> }
-                                    @if (match.Status == "pred") { <span style="color:var(--fg-3);font-variant-numeric:tabular-nums;font-size:13px;">@match.PredAway</span> }
-                                </div>
-                            </div>
-                            <div style="width:110px;text-align:right;">
-                                @if (match.Status == "live")   { <span class="bb-chip live">Ao vivo @match.Minute</span> }
-                                @if (match.Status == "pred")   { <span class="bb-chip gold">Palpite salvo</span> }
-                                @if (match.Status == "open")   { <span class="bb-chip">Fecha em @match.ClosesIn</span> }
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
+            <MatchListPanel Title="Jogos · 14 jun" Subtitle="4 jogos · 1 ao vivo">
+                @foreach (var (match, idx) in Matches.Select((m, i) => (m, i)))
+                {
+                    <MatchListItem Time="@match.Time"
+                                   Phase="@match.Phase"
+                                   HomeCode="@match.HomeCode"
+                                   AwayCode="@match.AwayCode"
+                                   HomeName="@match.HomeName"
+                                   AwayName="@match.AwayName"
+                                   Status="@match.Status"
+                                   ClosesIn="@match.ClosesIn"
+                                   Minute="@match.Minute"
+                                   LiveHome="@match.LiveHome"
+                                   LiveAway="@match.LiveAway"
+                                   PredHome="@match.PredHome"
+                                   PredAway="@match.PredAway"
+                                   IsSelected="@match.IsSelected"
+                                   IsLast="@(idx == Matches.Count - 1)"
+                                   OnSelect="() => SelectMatch(match)" />
+                }
+            </MatchListPanel>
 
             @if (ActiveMatch is { } am)
             {
-                <div class="bb-dcard" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">
-                    <div style="padding:20px 24px;border-bottom:1px solid var(--line);flex-shrink:0;">
-                        <div style="display:flex;gap:8px;margin-bottom:14px;">
-                            <span class="bb-chip">@am.Phase</span>
-                            <span class="bb-chip" style="margin-left:auto;"><Icon Path="@IconPaths.Lock" Size="12" /> Fecha @am.Time</span>
-                        </div>
-                        <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px;">
-                            <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-                                <Flag Code="@am.HomeCode" Size="64" />
-                                <div style="font-family:var(--font-display);font-size:18px;font-weight:600;letter-spacing:-0.02em;">@am.HomeName</div>
-                            </div>
-                            <div style="text-align:center;color:var(--fg-3);">
-                                <div style="font-size:11px;letter-spacing:0.08em;">14 jun · @am.Time</div>
-                                <div style="font-family:var(--font-display);font-size:36px;font-weight:600;color:var(--fg-2);margin:4px 0;">vs</div>
-                            </div>
-                            <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-                                <Flag Code="@am.AwayCode" Size="64" />
-                                <div style="font-family:var(--font-display);font-size:18px;font-weight:600;letter-spacing:-0.02em;">@am.AwayName</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="padding:20px 24px;flex:1;display:flex;flex-direction:column;overflow-y:auto;">
-                        <div style="font-size:11px;color:var(--fg-3);letter-spacing:0.08em;text-transform:uppercase;font-weight:600;margin-bottom:14px;">Seu palpite</div>
-                        <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:20px;">
-                            <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
-                                <button style="width:44px;height:32px;border-radius:8px;border:1px solid var(--line-strong);background:var(--bg-elev-2);color:var(--fg-2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;"
-                                        @onclick="() => PredHome = Math.Min(20, PredHome + 1)">+</button>
-                                <ScoreBox Value="@PredHome" Editable Size="lg" />
-                                <button style="width:44px;height:32px;border-radius:8px;border:1px solid var(--line-strong);background:var(--bg-elev-2);color:var(--fg-2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;"
-                                        @onclick="() => PredHome = Math.Max(0, PredHome - 1)">−</button>
-                            </div>
-                            <div style="font-size:28px;color:var(--fg-3);">×</div>
-                            <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
-                                <button style="width:44px;height:32px;border-radius:8px;border:1px solid var(--line-strong);background:var(--bg-elev-2);color:var(--fg-2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;"
-                                        @onclick="() => PredAway = Math.Min(20, PredAway + 1)">+</button>
-                                <ScoreBox Value="@PredAway" Editable Size="lg" />
-                                <button style="width:44px;height:32px;border-radius:8px;border:1px solid var(--line-strong);background:var(--bg-elev-2);color:var(--fg-2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;"
-                                        @onclick="() => PredAway = Math.Max(0, PredAway - 1)">−</button>
-                            </div>
-                        </div>
-
-                        <div style="font-size:11px;color:var(--fg-3);letter-spacing:0.08em;text-transform:uppercase;font-weight:600;margin-bottom:10px;">Salvar em qual bolão?</div>
-                        @foreach (var pool in PoolSelections)
-                        {
-                            <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:6px;border:1px solid @(pool.Selected ? "var(--brand-strong)" : "var(--line)");background:@(pool.Selected ? "color-mix(in oklab, var(--brand-strong) 10%, transparent)" : "transparent");border-radius:10px;cursor:pointer;"
-                                 @onclick="() => pool.Selected = !pool.Selected">
-                                <div style="width:18px;height:18px;border-radius:5px;background:@(pool.Selected ? "var(--brand-strong)" : "transparent");border:1.5px solid @(pool.Selected ? "var(--brand-strong)" : "var(--line-strong)");color:var(--brand-ink);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                    @if (pool.Selected) { <Icon Path="@IconPaths.Check" Size="11" /> }
-                                </div>
-                                <div style="flex:1;">
-                                    <div style="font-size:13px;font-weight:500;">@pool.Name</div>
-                                    <div style="font-size:11px;color:var(--fg-3);">@pool.Sub</div>
-                                </div>
-                            </div>
-                        }
-
-                        <div style="margin-top:auto;padding-top:16px;display:flex;gap:10px;">
-                            <button class="bb-topbar-btn" style="flex:1;height:44px;font-size:14px;">Limpar</button>
-                            <button class="bb-topbar-btn primary" style="flex:2;height:44px;font-size:14px;">
-                                Salvar palpite em @(PoolSelections.Count(p => p.Selected)) bolão(ões)
-                            </button>
-                        </div>
+                <div class="bb-dcard calendar-detail-card">
+                    <CalendarDetailHeader Phase="@am.Phase"
+                                         Time="@am.Time"
+                                         HomeCode="@am.HomeCode"
+                                         AwayCode="@am.AwayCode"
+                                         HomeName="@am.HomeName"
+                                         AwayName="@am.AwayName" />
+                    <div class="calendar-detail-body">
+                        <PredictionInput HomePrediction="@PredHome"
+                                         AwayPrediction="@PredAway"
+                                         IsLocked="false"
+                                         IsBusy="false"
+                                         HomePredictionChanged="v => PredHome = v"
+                                         AwayPredictionChanged="v => PredAway = v" />
+                        <PoolSelector>
+                            @foreach (var pool in PoolSelections)
+                            {
+                                <PoolSelectionItem Name="@pool.Name"
+                                                   Sub="@pool.Sub"
+                                                   Selected="@pool.Selected"
+                                                   OnToggle="() => pool.Selected = !pool.Selected" />
+                            }
+                        </PoolSelector>
+                        <CalendarDetailActions SelectedPoolCount="@PoolSelections.Count(p => p.Selected)"
+                                               OnClear="ClearPrediction"
+                                               OnSave="SavePrediction" />
                     </div>
                 </div>
             }
             else
             {
-                <div class="bb-dcard" style="display:flex;align-items:center;justify-content:center;">
-                    <span style="font-size:13px;color:var(--fg-3);">Selecione um jogo para palpitar.</span>
+                <div class="bb-dcard calendar-detail-empty">
+                    <span class="calendar-detail-empty-label">Selecione um jogo para palpitar.</span>
                 </div>
             }
+
         </div>
 
     </main>
@@ -193,17 +131,17 @@
 
     private List<MatchItem> Matches { get; } =
     [
-        new() { Time = "13:00", HomeCode = "FRA", HomeName = "França",    AwayCode = "SUI", AwayName = "Suíça",     Phase = "Grupo D", Status = "pred", PredHome = 2, PredAway = 1 },
-        new() { Time = "16:00", HomeCode = "ARG", HomeName = "Argentina", AwayCode = "MEX", AwayName = "México",    Phase = "Grupo A", Status = "open", ClosesIn = "1h 47m", IsSelected = true },
-        new() { Time = "19:00", HomeCode = "BRA", HomeName = "Brasil",    AwayCode = "SUI", AwayName = "Suíça",     Phase = "Grupo G", Status = "live", Minute = "38'", LiveHome = 1, LiveAway = 0 },
-        new() { Time = "22:00", HomeCode = "ENG", HomeName = "Inglaterra",AwayCode = "USA", AwayName = "EUA",       Phase = "Grupo B", Status = "open", ClosesIn = "7h 55m" },
+        new() { Time = "13:00", HomeCode = "FRA", HomeName = "França",     AwayCode = "SUI", AwayName = "Suíça",      Phase = "Grupo D", Status = "pred", PredHome = 2, PredAway = 1 },
+        new() { Time = "16:00", HomeCode = "ARG", HomeName = "Argentina",  AwayCode = "MEX", AwayName = "México",     Phase = "Grupo A", Status = "open", ClosesIn = "1h 47m", IsSelected = true },
+        new() { Time = "19:00", HomeCode = "BRA", HomeName = "Brasil",     AwayCode = "SUI", AwayName = "Suíça",      Phase = "Grupo G", Status = "live", Minute = "38'", LiveHome = 1, LiveAway = 0 },
+        new() { Time = "22:00", HomeCode = "ENG", HomeName = "Inglaterra", AwayCode = "USA", AwayName = "EUA",        Phase = "Grupo B", Status = "open", ClosesIn = "7h 55m" },
     ];
 
     private List<PoolSelection> PoolSelections { get; } =
     [
-        new() { Name = "Trampo TechCo",       Sub = "28 membros · você #1", Selected = true },
-        new() { Name = "Família Silva 2026",  Sub = "12 membros · você #2", Selected = true },
-        new() { Name = "Galera do FC",        Sub = "8 membros · você #5",  Selected = false },
+        new() { Name = "Trampo TechCo",      Sub = "28 membros · você #1", Selected = true },
+        new() { Name = "Família Silva 2026", Sub = "12 membros · você #2", Selected = true },
+        new() { Name = "Galera do FC",       Sub = "8 membros · você #5",  Selected = false },
     ];
 
     private int PredHome { get; set; } = 2;
@@ -216,4 +154,51 @@
         foreach (var m in Matches) m.IsSelected = false;
         match.IsSelected = true;
     }
+
+    private void ClearPrediction()
+    {
+        PredHome = 0;
+        PredAway = 0;
+    }
+
+    private void SavePrediction() { }
 }
+
+<style>
+    .calendar-layout {
+        flex: 1;
+        padding: 0 40px 40px;
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 20px;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .calendar-detail-card {
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .calendar-detail-body {
+        padding: 20px 24px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto;
+    }
+
+    .calendar-detail-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .calendar-detail-empty-label {
+        font-size: 13px;
+        color: var(--fg-3);
+    }
+</style>

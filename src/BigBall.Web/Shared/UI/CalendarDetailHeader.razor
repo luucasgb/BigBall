@@ -1,0 +1,83 @@
+<div class="calendar-detail-header">
+    <div class="calendar-detail-chips">
+        <span class="bb-chip">@Phase</span>
+        <span class="bb-chip" style="margin-left:auto;"><Icon Path="@IconPaths.Lock" Size="12" /> Fecha @Time</span>
+    </div>
+    <div class="calendar-detail-teams">
+        <div class="calendar-detail-team">
+            <Flag Code="@HomeCode" Size="64" />
+            <div class="calendar-detail-team-name">@HomeName</div>
+        </div>
+        <div class="calendar-detail-vs">
+            <div class="calendar-detail-date">14 jun · @Time</div>
+            <div class="calendar-detail-vs-label">vs</div>
+        </div>
+        <div class="calendar-detail-team">
+            <Flag Code="@AwayCode" Size="64" />
+            <div class="calendar-detail-team-name">@AwayName</div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Phase { get; set; } = "";
+    [Parameter] public string Time { get; set; } = "";
+    [Parameter] public string HomeCode { get; set; } = "";
+    [Parameter] public string AwayCode { get; set; } = "";
+    [Parameter] public string HomeName { get; set; } = "";
+    [Parameter] public string AwayName { get; set; } = "";
+}
+
+<style>
+    .calendar-detail-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--line);
+        flex-shrink: 0;
+    }
+
+    .calendar-detail-chips {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .calendar-detail-teams {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 24px;
+    }
+
+    .calendar-detail-team {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .calendar-detail-team-name {
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        text-align: center;
+    }
+
+    .calendar-detail-vs {
+        text-align: center;
+        color: var(--fg-3);
+    }
+
+    .calendar-detail-date {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+    }
+
+    .calendar-detail-vs-label {
+        font-family: var(--font-display);
+        font-size: 36px;
+        font-weight: 600;
+        color: var(--fg-2);
+        margin: 4px 0;
+    }
+</style>

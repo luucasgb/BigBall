@@ -1,0 +1,15 @@
+<div class="prediction-layout">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
+<style>
+    .prediction-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+</style>

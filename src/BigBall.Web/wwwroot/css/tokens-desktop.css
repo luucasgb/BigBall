@@ -1,0 +1,252 @@
+/* BigBall — desktop layout tokens and components, layered on tokens.css */
+
+.bb-desk {
+  width: 100%;
+  height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 256px 1fr;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+.bb-desk * { box-sizing: border-box; }
+
+/* ─── Sidebar ──────────────────────────────────────────────── */
+.bb-sidebar {
+  background: color-mix(in oklab, var(--bg) 92%, #000);
+  border-right: 1px solid var(--line);
+  padding: 28px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+.bb-logo {
+  display: flex; align-items: center; gap: 12px;
+  padding: 4px 8px 18px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.bb-logo-mark {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--brand-strong);
+  color: var(--brand-ink);
+  display: flex; align-items: center; justify-content: center;
+}
+.bb-logo-text {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 700; letter-spacing: -0.03em;
+}
+.bb-nav-section {
+  font-size: 10px; color: var(--fg-3);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 16px 10px 8px;
+  font-weight: 600;
+}
+.bb-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--fg-2);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.12s;
+  user-select: none;
+}
+.bb-nav-item:hover { background: var(--chip-bg); color: var(--fg); }
+.bb-nav-item.active {
+  background: color-mix(in oklab, var(--brand-strong) 14%, transparent);
+  color: var(--fg);
+}
+.bb-nav-item.active svg { color: var(--brand-strong); }
+.bb-nav-badge {
+  margin-left: auto; font-size: 11px;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+}
+.bb-sidebar-foot {
+  margin-top: auto;
+  padding: 14px 10px 0;
+  display: flex; align-items: center; gap: 10px;
+  border-top: 1px solid var(--line);
+}
+
+/* ─── Main area ───────────────────────────────────────────── */
+.bb-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bb-topbar {
+  height: 64px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.bb-search {
+  display: flex; align-items: center; gap: 10px;
+  height: 38px; width: 360px;
+  padding: 0 14px;
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  border-radius: 10px;
+  color: var(--fg-3);
+  font-size: 13px;
+}
+.bb-kbd {
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 2px 6px; border-radius: 4px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-3);
+  margin-left: auto;
+}
+.bb-topbar-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.bb-topbar-btn {
+  height: 38px; min-width: 38px; padding: 0 12px;
+  border-radius: 10px;
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--fg-2);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer;
+}
+.bb-topbar-btn:hover { color: var(--fg); background: var(--bg-elev-2); }
+.bb-topbar-btn.primary {
+  background: var(--brand-strong);
+  color: var(--brand-ink);
+  border-color: transparent;
+  font-weight: 600;
+}
+.bb-topbar-btn.primary:hover {
+  background: color-mix(in oklab, var(--brand-strong) 90%, #fff);
+}
+.bb-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.bb-content::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ─── Page header ─────────────────────────────────────────── */
+.bb-page-h {
+  padding: 32px 40px 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+.bb-page-eyebrow {
+  font-size: 11px; color: var(--fg-3);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  font-weight: 600;
+}
+.bb-page-title {
+  font-family: var(--font-display);
+  font-size: 32px; font-weight: 600;
+  letter-spacing: -0.025em;
+  margin-top: 4px;
+}
+.bb-page-sub {
+  font-size: 14px; color: var(--fg-2);
+  margin-top: 4px;
+}
+
+/* ─── Desktop card ────────────────────────────────────────── */
+.bb-dcard {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+}
+.bb-dcard-h {
+  display: flex; align-items: center;
+  margin-bottom: 16px;
+}
+.bb-dcard-title {
+  font-size: 15px; font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.bb-dcard-link {
+  margin-left: auto;
+  font-size: 13px; color: var(--fg-2);
+  display: inline-flex; align-items: center; gap: 4px;
+  cursor: pointer;
+}
+.bb-dcard-link:hover { color: var(--fg); }
+
+/* ─── Table ───────────────────────────────────────────────── */
+.bb-table { width: 100%; border-collapse: collapse; }
+.bb-table th {
+  text-align: left; font-size: 10px; font-weight: 600;
+  color: var(--fg-3); letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 8px 10px; border-bottom: 1px solid var(--line);
+}
+.bb-table td {
+  padding: 12px 10px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.bb-table tr:last-child td { border-bottom: none; }
+.bb-table tr:hover td { background: color-mix(in oklab, var(--brand-strong) 5%, transparent); }
+.bb-table .num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+/* ─── Tab row ─────────────────────────────────────────────── */
+.bb-tab-row {
+  display: flex; gap: 4px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 40px;
+  flex-shrink: 0;
+}
+.bb-tab-row .t {
+  padding: 14px 14px;
+  font-size: 14px; font-weight: 500;
+  color: var(--fg-2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.bb-tab-row .t.active {
+  color: var(--fg);
+  border-bottom-color: var(--brand-strong);
+  font-weight: 600;
+}
+.bb-tab-row .t:hover { color: var(--fg); }
+
+/* ─── Auth / Login page ───────────────────────────────────── */
+.bb-auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.bb-auth-card {
+  width: 420px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}

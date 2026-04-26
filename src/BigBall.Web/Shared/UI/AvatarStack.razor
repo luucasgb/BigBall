@@ -1,0 +1,26 @@
+@* Overlapping row of Avatar circles, up to Max visible + overflow count. *@
+<div style="display:flex;align-items:center;">
+    @for (int i = 0; i < DisplayCount; i++)
+    {
+        var name = Names[i];
+        var isFirst = i == 0;
+        <div style="@(!isFirst ? "margin-left:-10px;" : "")box-shadow:0 0 0 2.5px var(--bg-elev);border-radius:50%;z-index:@(DisplayCount - i);">
+            <Avatar Name="@name" Size="@Size" />
+        </div>
+    }
+    @if (Overflow > 0)
+    {
+        <div style="margin-left:-10px;width:@(Size)px;height:@(Size)px;border-radius:50%;background:var(--chip-bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:@((int)(Size * 0.36))px;color:var(--fg-2);font-weight:600;box-shadow:0 0 0 2.5px var(--bg-elev);flex-shrink:0;">
+            +@Overflow
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<string> Names { get; set; } = [];
+    [Parameter] public int Size { get; set; } = 28;
+    [Parameter] public int Max { get; set; } = 5;
+
+    private int DisplayCount => Math.Min(Names.Count, Max);
+    private int Overflow => Math.Max(0, Names.Count - Max);
+}

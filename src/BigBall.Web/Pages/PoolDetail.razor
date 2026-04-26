@@ -1,93 +1,180 @@
 @page "/pools/{PoolId:guid}"
 @inject PoolDetailViewModel VM
+@inject NavigationManager Nav
 @implements IDisposable
 
-<Phone>
-    <div class="bb-header">
-        <div class="bb-iconbtn" @onclick="() => VM.GoBackCommand.Execute(null)"><Icon Path="@IconPaths.ChevronL" /></div>
-        <div class="bb-header-title">@(VM.Pool?.Name ?? "Carregando…")</div>
-        <div class="bb-iconbtn"><Icon Path="@IconPaths.Dots" /></div>
-    </div>
+<div class="bb-desk theme-dark">
+    <Sidebar Active="dashboard" />
+    <main class="bb-main">
+        <DesktopTopbar Placeholder="Buscar membros, partidas, palpites…" />
 
-    <div class="bb-scroll" style="display:flex;flex-direction:column;gap:14px;">
         @if (VM.Pool is { } pool)
         {
-            <div class="bb-card" style="display:flex;flex-direction:column;gap:8px;">
-                <div class="bb-row spread">
-                    <div>
-                        <div style="font-size:11px;color:var(--fg-3);letter-spacing:0.04em;text-transform:uppercase;">Minha posição</div>
-                        <div class="bb-big-num">#@pool.MyPosition</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:11px;color:var(--fg-3);letter-spacing:0.04em;text-transform:uppercase;">Pontos</div>
-                        <div class="bb-big-num">@pool.MyPoints</div>
-                    </div>
+            <div class="bb-page-h" style="align-items:center;">
+                <div style="width:64px;height:64px;border-radius:16px;background:color-mix(in oklab, var(--brand-strong) 20%, transparent);color:var(--brand-strong);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <Icon Path="@IconPaths.Trophy" Size="28" />
                 </div>
-                @if (!string.IsNullOrEmpty(pool.PrizeDescription))
-                {
-                    <div style="font-size:12px;color:var(--fg-2);">Prêmio: <strong style="color:var(--fg);">@pool.PrizeDescription</strong></div>
-                }
-            </div>
-
-            <SegmentedTabs T="PoolTab"
-                           Items="@TabItems"
-                           Selected="@VM.SelectedTab"
-                           SelectedChanged="OnTabChanged" />
-
-            @if (VM.SelectedTab == PoolTab.Ranking)
-            {
-                @if (VM.HasTieWithMe)
-                {
-                    <div class="bb-alert">
-                        <Icon Path="@IconPaths.Alert" Size="18" />
-                        <div>
-                            <strong>Empate no ranking.</strong><br />
-                            Critérios alfabético + sorteio ainda não aplicados neste stub (PRD 4.8).
-                        </div>
-                    </div>
-                }
-
-                <div class="bb-card" style="padding:6px 14px;">
-                    @foreach (var row in VM.Ranking)
+                <div style="flex:1;">
+                    <div class="bb-page-eyebrow">Bolão · @pool.Visibility</div>
+                    <div class="bb-page-title">@pool.Name</div>
+                    @if (!string.IsNullOrEmpty(pool.PrizeDescription))
                     {
-                        <div class="bb-rank-row @(row.IsMe ? "me" : "")">
-                            <div class="bb-rank-pos">@row.Rank</div>
-                            <Avatar Name="@row.Name" Size="28" />
-                            <div>
-                                <div class="bb-rank-name">@row.Name@(row.IsMe ? " (você)" : "")</div>
-                                <div style="font-size:11px;color:var(--fg-3);">
-                                    @row.Tier20Count × 20pts · @row.Tier16Count × 16pts
-                                </div>
-                            </div>
-                            <div class="bb-rank-pts">@row.Points</div>
-                        </div>
+                        <div class="bb-page-sub">Prêmio: @pool.PrizeDescription</div>
                     }
                 </div>
-            }
-            else
-            {
-                <div class="bb-empty">Em breve.</div>
-            }
+                <AvatarStack Names="@VM.Ranking.Select(r => r.Name).ToList()" Size="36" Max="6" />
+                <button class="bb-topbar-btn" @onclick='() => Nav.NavigateTo("/")'>
+                    <Icon Path="@IconPaths.ChevronL" Size="16" /> Voltar
+                </button>
+            </div>
+
+            <div class="bb-tab-row">
+                <div class="t @(VM.SelectedTab == PoolTab.Ranking ? "active" : "")"
+                     @onclick='() => VM.SelectedTab = PoolTab.Ranking'>Ranking</div>
+                <div class="t @(VM.SelectedTab == PoolTab.Matches ? "active" : "")"
+                     @onclick='() => VM.SelectedTab = PoolTab.Matches'>Jogos</div>
+                <div class="t @(VM.SelectedTab == PoolTab.Members ? "active" : "")"
+                     @onclick='() => VM.SelectedTab = PoolTab.Members'>Membros</div>
+                <div class="t @(VM.SelectedTab == PoolTab.Prize ? "active" : "")"
+                     @onclick='() => VM.SelectedTab = PoolTab.Prize'>Premiação & regras</div>
+            </div>
+
+            <div class="bb-content">
+                <div style="padding:24px 40px 40px;display:grid;grid-template-columns:1.6fr 1fr;gap:20px;">
+
+                    @if (VM.SelectedTab == PoolTab.Ranking)
+                    {
+                        <div class="bb-dcard" style="padding:0;">
+                            <div style="padding:18px 24px;display:flex;align-items:center;border-bottom:1px solid var(--line);">
+                                <div class="bb-dcard-title">Ranking geral</div>
+                                <div style="margin-left:auto;">
+                                    <span style="padding:2px 8px;background:var(--chip-bg);border-radius:6px;font-size:12px;color:var(--fg-2);">
+                                        #@pool.MyPosition · @pool.MyPoints pts
+                                    </span>
+                                </div>
+                            </div>
+                            <table class="bb-table">
+                                <thead>
+                                    <tr>
+                                        <th style="padding-left:24px;width:50px;">#</th>
+                                        <th>Membro</th>
+                                        <th style="text-align:right;">20 pts</th>
+                                        <th style="text-align:right;">16 pts</th>
+                                        <th style="text-align:right;">+3 pen.</th>
+                                        <th style="text-align:right;">Últ.</th>
+                                        <th style="text-align:right;padding-right:24px;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in VM.Ranking)
+                                    {
+                                        <tr style="@(row.IsMe ? "background:color-mix(in oklab, var(--brand-strong) 6%, transparent);" : "")">
+                                            <td style="padding-left:24px;" class="num">
+                                                <span style="color:@(row.Rank == 1 ? "var(--brand-strong)" : "var(--fg-2)");">@row.Rank</span>
+                                            </td>
+                                            <td>
+                                                <div style="display:flex;align-items:center;gap:12px;">
+                                                    <Avatar Name="@row.Name" Size="32" />
+                                                    <div>
+                                                        <div style="font-weight:@(row.IsMe ? "600" : "500");display:flex;align-items:center;gap:8px;">
+                                                            @row.Name
+                                                            @if (row.IsMe)
+                                                            {
+                                                                <span style="font-size:10px;color:var(--fg-3);">VOCÊ</span>
+                                                            }
+                                                            @if (row.TieGroupId.HasValue && row.IsMe && VM.HasTieWithMe)
+                                                            {
+                                                                <span class="bb-chip" style="padding:2px 6px;font-size:9px;">empate</span>
+                                                            }
+                                                        </div>
+                                                        <div style="font-size:11px;color:var(--fg-3);">12 jogos palpitados</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="num" style="color:@(row.Tier20Count >= 3 ? "var(--brand-strong)" : "var(--fg-2)");">@row.Tier20Count×</td>
+                                            <td class="num" style="color:var(--fg-2);">@row.Tier16Count×</td>
+                                            <td class="num" style="color:var(--fg-2);">@row.PenaltyBonusCount×</td>
+                                            <td class="num" style="color:@(row.TrendLastMatch > 0 ? "var(--success)" : "var(--fg-3)");font-family:var(--font-sans);font-weight:500;font-size:13px;">
+                                                @(row.TrendLastMatch > 0 ? $"+{row.TrendLastMatch}" : "—")
+                                            </td>
+                                            <td class="num" style="padding-right:24px;font-size:17px;color:@(row.Rank == 1 ? "var(--brand-strong)" : "var(--fg)");">@row.Points</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="bb-dcard" style="display:flex;align-items:center;justify-content:center;min-height:200px;">
+                            <span class="bb-empty">Em breve.</span>
+                        </div>
+                    }
+
+                    <div style="display:flex;flex-direction:column;gap:20px;">
+                        @if (VM.HasTieWithMe)
+                        {
+                            <div class="bb-dcard" style="border-color:color-mix(in oklab, var(--warning) 35%, transparent);background:color-mix(in oklab, var(--warning) 8%, var(--bg-elev));">
+                                <div style="display:flex;align-items:flex-start;gap:12px;">
+                                    <div style="color:var(--warning);margin-top:2px;"><Icon Path="@IconPaths.Alert" Size="18" /></div>
+                                    <div>
+                                        <div style="font-weight:600;margin-bottom:4px;">Empate no ranking</div>
+                                        <div style="font-size:13px;color:var(--fg-2);line-height:1.5;">
+                                            Você está empatado com outro membro. Desempate pelo número de
+                                            placares exatos (20 pts), depois 16 pts, e assim por diante (PRD 4.8).
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="bb-dcard">
+                            <div class="bb-dcard-h">
+                                <div class="bb-dcard-title">Minha posição</div>
+                            </div>
+                            <div style="display:flex;gap:32px;">
+                                <div>
+                                    <div style="font-size:11px;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Posição</div>
+                                    <div style="font-family:var(--font-display);font-size:40px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;color:var(--brand-strong);">#@pool.MyPosition</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:11px;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Pontos</div>
+                                    <div style="font-family:var(--font-display);font-size:40px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;">@pool.MyPoints</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bb-dcard">
+                            <div class="bb-dcard-h">
+                                <div class="bb-dcard-title">Líder atual</div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <Avatar Name="@pool.Leader.Name" Size="40" />
+                                <div>
+                                    <div style="font-weight:600;font-size:15px;">@pool.Leader.Name</div>
+                                    <div style="font-size:13px;color:var(--fg-2);">@pool.Leader.Points pts</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         }
         else if (!string.IsNullOrEmpty(VM.ErrorMessage))
         {
-            <div class="bb-error">@VM.ErrorMessage</div>
+            <div style="padding:40px;"><div class="bb-error">@VM.ErrorMessage</div></div>
         }
-    </div>
+        else
+        {
+            <div style="padding:40px;color:var(--fg-3);">Carregando…</div>
+        }
 
-    <BottomNav Active="home" />
-</Phone>
+    </main>
+</div>
 
 @code {
     [Parameter] public Guid PoolId { get; set; }
-
-    private static readonly IReadOnlyList<SegmentedTabs<PoolTab>.Item> TabItems = new[]
-    {
-        new SegmentedTabs<PoolTab>.Item(PoolTab.Ranking, "Ranking"),
-        new SegmentedTabs<PoolTab>.Item(PoolTab.Matches, "Jogos"),
-        new SegmentedTabs<PoolTab>.Item(PoolTab.Prize,   "Prêmio"),
-        new SegmentedTabs<PoolTab>.Item(PoolTab.Members, "Membros"),
-    };
 
     protected override async Task OnParametersSetAsync()
     {
@@ -100,7 +187,6 @@
 
     private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
     private void OnRankingChanged(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => InvokeAsync(StateHasChanged);
-    private void OnTabChanged(PoolTab tab) => VM.SelectedTab = tab;
 
     public void Dispose()
     {

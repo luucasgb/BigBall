@@ -25,4 +25,7 @@ public static class IconPaths
     public const string Whistle  = "<path d=\"M15 9a6 6 0 1 1-6 6\"/><circle cx=\"15\" cy=\"9\" r=\"0.8\" fill=\"currentColor\"/><path d=\"M15 9l5-3\"/>";
     public const string Pen      = "<path d=\"m4 20 3-1 11-11-2-2L5 17zM14 6l2 2\"/>";
     public const string Alert    = "<path d=\"M12 3 2 20h20z\"/><path d=\"M12 10v5M12 18v.01\"/>";
+    public const string Search   = "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m21 21-4-4\"/>";
+    public const string Filter   = "<path d=\"M3 5h18M7 12h10M10 19h4\"/>";
+    public const string Sparkle  = "<path d=\"M12 3v1m0 16v1M4.22 4.22l.71.71m12.02 12.02.71.71M3 12h1m16 0h1M4.22 19.78l.71-.71M18.36 5.64l.71-.71\"/><circle cx=\"12\" cy=\"12\" r=\"4\"/>";
 }

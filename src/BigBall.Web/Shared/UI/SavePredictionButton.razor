@@ -1,0 +1,22 @@
+<button class="bb-btn bb-btn-primary save-button"
+        type="button"
+        disabled="@(!CanSave || IsBusy)"
+        title="@ToolTipText"
+        @onclick="() => OnSave.InvokeAsync()">
+    @(IsSaved ? "Atualizar palpite" : "Salvar palpite")
+</button>
+
+@code {
+    [Parameter] public bool IsSaved { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public bool CanSave { get; set; }
+    [Parameter] public string? ToolTipText { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+}
+
+<style>
+    .save-button {
+        width: 100%;
+    }
+</style>

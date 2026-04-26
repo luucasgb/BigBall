@@ -1,0 +1,52 @@
+@using BigBall.Web.Shared.UI
+
+<div class="match-header">
+    <div class="match-title-group">
+        @if (!string.IsNullOrEmpty(Phase))
+        {
+            <div class="bb-page-eyebrow">@Phase</div>
+        }
+        <div class="bb-page-title">Palpite · @HomeCode × @AwayCode</div>
+        <div class="bb-page-sub">@KickoffUtc.ToLocalTime().ToString("dd/MM HH:mm") · BRT</div>
+    </div>
+    <div class="match-chip-group">
+        @if (IsLocked)
+        {
+            <span class="bb-chip live">Bloqueado</span>
+        }
+        else
+        {
+            <span class="bb-chip" style="font-variant-numeric:tabular-nums;">
+                <Icon Path="@IconPaths.Lock" Size="12" /> @TimeFormatting.FormatCountdown(SecondsUntilLock)
+            </span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Phase { get; set; }
+    [Parameter] public string HomeCode { get; set; } = "";
+    [Parameter] public string AwayCode { get; set; } = "";
+    [Parameter] public DateTime KickoffUtc { get; set; }
+    [Parameter] public bool IsLocked { get; set; }
+    [Parameter] public int SecondsUntilLock { get; set; }
+}
+
+<style>
+    .match-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 40px 32px;
+    }
+
+    .match-title-group {
+        flex: 1;
+    }
+
+    .match-chip-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+</style>

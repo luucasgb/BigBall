@@ -2,19 +2,19 @@
 @inject LoginViewModel VM
 @implements IDisposable
 
-<Phone>
-    <div class="bb-scroll" style="padding:28px 24px;display:flex;flex-direction:column;gap:22px;">
-        <div style="display:flex;flex-direction:column;gap:6px;margin-top:20px;">
-            <div style="display:flex;align-items:center;gap:10px;">
+<div class="bb-auth-page theme-dark">
+    <div class="bb-auth-card">
+        <div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
                 <div style="width:44px;height:44px;border-radius:14px;background:var(--brand-strong);display:flex;align-items:center;justify-content:center;">
                     <Icon Path="@IconPaths.Trophy" Size="24" Style="color:var(--brand-ink);" />
                 </div>
                 <div style="font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-0.02em;">BigBall</div>
             </div>
-            <p style="color:var(--fg-2);font-size:13px;margin:0;">Entre com seu e-mail para acompanhar seus bolões.</p>
+            <p style="color:var(--fg-2);font-size:14px;margin:0;">Entre com seu e-mail para acompanhar seus bolões.</p>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;flex-direction:column;gap:14px;">
             <div>
                 <div class="bb-field-label">E-mail</div>
                 <input class="bb-input" type="email" placeholder="voce@email.com"
@@ -32,7 +32,7 @@
             <div class="bb-error">@VM.ErrorMessage</div>
         }
 
-        <button class="bb-btn bb-btn-primary" type="button"
+        <button class="bb-btn bb-btn-primary" type="button" style="width:100%;"
                 disabled="@(VM.IsBusy || !VM.LoginCommand.CanExecute(null))"
                 @onclick="ExecuteLogin">
             @(VM.IsBusy ? "Entrando…" : "Entrar")
@@ -42,17 +42,14 @@
             Stub de autenticação — qualquer e-mail + senha não-vazios funcionam.
         </div>
     </div>
-</Phone>
+</div>
 
 @code {
     protected override void OnInitialized() => VM.PropertyChanged += OnVmChanged;
 
     private void OnVmChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
 
-    private async Task ExecuteLogin()
-    {
-        await VM.LoginCommand.ExecuteAsync(null);
-    }
+    private async Task ExecuteLogin() => await VM.LoginCommand.ExecuteAsync(null);
 
     public void Dispose() => VM.PropertyChanged -= OnVmChanged;
 }

@@ -1,0 +1,92 @@
+@* Card showing submission stats with progress bar *@
+<div class="bb-dcard">
+    <div class="bb-dcard-h">
+        <div class="bb-dcard-title">@Title</div>
+    </div>
+    <div class="submissions-content">
+        <div class="submissions-stat">
+            <div class="submissions-value">@Count</div>
+            <div class="submissions-out-of">/ @Total elegíveis</div>
+        </div>
+        <div class="submissions-bar-container">
+            <div class="submissions-bar-bg">
+                <div class="submissions-bar-fill" style="width:@Percentage%;"></div>
+            </div>
+        </div>
+        <div class="submissions-footer">
+            <span>@FooterLeft</span>
+            <span>@FooterRight</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Palpites enviados";
+    [Parameter] public int Count { get; set; }
+    [Parameter] public int Total { get; set; }
+    [Parameter] public string FooterLeft { get; set; } = "";
+    [Parameter] public string FooterRight { get; set; } = "";
+
+    private int Percentage => Total > 0 ? (Count * 100 / Total) : 0;
+}
+
+<style>
+    .submissions-content {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .submissions-stat {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+
+    .submissions-value {
+        font-family: var(--font-display);
+        font-size: 44px;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .submissions-out-of {
+        font-size: 14px;
+        color: var(--fg-3);
+    }
+
+    .submissions-bar-container {
+        height: 8px;
+        background: var(--chip-bg);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .submissions-bar-bg {
+        height: 100%;
+        width: 100%;
+    }
+
+    .submissions-bar-fill {
+        height: 100%;
+        background: var(--brand);
+    }
+
+    .submissions-footer {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--fg-3);
+        gap: 12px;
+    }
+
+    .submissions-footer > span:first-child {
+        flex: 1;
+    }
+
+    .submissions-footer > span:last-child {
+        flex-shrink: 0;
+        text-align: right;
+    }
+</style>

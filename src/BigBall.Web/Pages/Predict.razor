@@ -1,5 +1,9 @@
 @page "/pools/{PoolId:guid}/predict/{MatchId:guid}"
+@page "/predict"
+@using BigBall.Client.Core.Abstractions
 @inject PredictViewModel VM
+@inject IPoolsApi PoolsApi
+@inject NavigationManager Nav
 @implements IDisposable
 
 <div class="bb-desk theme-dark">
@@ -21,6 +25,15 @@
             {
                 <div class="bb-page-h">
                     <div class="bb-page-title">Palpite</div>
+                </div>
+            }
+            @{
+                var headErr = _resolveError ?? VM.ErrorMessage;
+            }
+            @if (headErr is { } he)
+            {
+                <div style="padding:0 40px 24px;max-width:640px;">
+                    <ErrorAlert Message="@he" />
                 </div>
             }
 
@@ -49,7 +62,7 @@
                     </PredictionLayout>
                 </div>
             }
-            else if (VM.IsBusy)
+            else if (VM.IsBusy || _resolving)
             {
                 <div style="padding:40px;color:var(--fg-3);">Carregando…</div>
             }
@@ -62,9 +75,49 @@
     [Parameter] public Guid PoolId { get; set; }
     [Parameter] public Guid MatchId { get; set; }
 
+    private bool _resolving;
+    private string? _resolveError;
+
     protected override async Task OnParametersSetAsync()
     {
+        if (PoolId == Guid.Empty || MatchId == Guid.Empty)
+        {
+            _resolving = true;
+            _resolveError = null;
+            try
+            {
+                var pools = await PoolsApi.GetMyPoolsAsync();
+                var featured = pools
+                    .Where(p => p.NextMatch is not null)
+                    .OrderBy(p => p.NextMatch!.KickoffUtc)
+                    .FirstOrDefault()
+                    ?? pools.FirstOrDefault();
+                if (featured is null)
+                {
+                    _resolveError = "Nenhum bolão encontrado.";
+                    return;
+                }
+                if (featured.NextMatch is null)
+                {
+                    _resolveError = "Não há partida aberta para palpite no momento.";
+                    return;
+                }
+                Nav.NavigateTo($"/pools/{featured.Id}/predict/{featured.NextMatch.Id}", replace: true);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _resolveError = ex.Message;
+            }
+            finally
+            {
+                _resolving = false;
+            }
+            return;
+        }
+
+        _resolveError = null;
         if (VM.PoolId == PoolId && VM.MatchId == MatchId) return;
+        VM.PropertyChanged -= OnVmChanged;
         VM.PropertyChanged += OnVmChanged;
         VM.PoolId = PoolId;
         VM.MatchId = MatchId;

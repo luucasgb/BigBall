@@ -1,0 +1,240 @@
+<!-- Ranking table displaying pool member scores and statistics -->
+<div class="ranking-table-container">
+    <div class="ranking-table-header">
+        <div class="ranking-table-title">Ranking geral</div>
+        <div class="ranking-table-my-position">
+            <span class="ranking-chip">
+                #@MyPosition · @MyPoints pts
+            </span>
+        </div>
+    </div>
+    <table class="bb-table">
+        <thead>
+            <tr>
+                <th class="col-rank">#</th>
+                <th class="col-member">Membro</th>
+                <th class="col-score">20 pts</th>
+                <th class="col-score">16 pts</th>
+                <th class="col-score">+3 pen.</th>
+                <th class="col-trend">Últ.</th>
+                <th class="col-total">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Rows != null)
+            {
+                @foreach (var row in Rows)
+                {
+                <tr class="@(row.IsMe ? "is-me" : "")">
+                    <td class="col-rank">
+                        <span class="rank-number @(row.Rank == 1 ? "rank-first" : "")">@row.Rank</span>
+                    </td>
+                    <td class="col-member">
+                        <div class="member-cell">
+                            <Avatar Name="@row.Name" Size="32" />
+                            <div class="member-info">
+                                <div class="member-name @(row.IsMe ? "is-me" : "")">
+                                    @row.Name
+                                    @if (row.IsMe)
+                                    {
+                                        <span class="member-badge">VOCÊ</span>
+                                    }
+                                    @if (row.TieGroupId.HasValue && row.IsMe && HasTieWithMe)
+                                    {
+                                        <span class="bb-chip member-tie-badge">empate</span>
+                                    }
+                                </div>
+                                <div class="member-matches">12 jogos palpitados</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="col-score @(row.Tier20Count >= 3 ? "score-highlight" : "")">@row.Tier20Count×</td>
+                    <td class="col-score">@row.Tier16Count×</td>
+                    <td class="col-score">@row.PenaltyBonusCount×</td>
+                    <td class="col-trend">
+                        <span class="@(row.TrendLastMatch > 0 ? "trend-positive" : "trend-neutral")">
+                            @(row.TrendLastMatch > 0 ? $"+{row.TrendLastMatch}" : "—")
+                        </span>
+                    </td>
+                    <td class="col-total @(row.Rank == 1 ? "total-highlight" : "")">@row.Points</td>
+                </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public List<RankingRowDto>? Rows { get; set; } = new();
+    [Parameter] public int MyPosition { get; set; }
+    [Parameter] public int MyPoints { get; set; }
+    [Parameter] public bool HasTieWithMe { get; set; }
+}
+
+<style>
+    .ranking-table-container {
+        background: var(--bg-elev);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .ranking-table-header {
+        padding: 18px 24px;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .ranking-table-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--fg);
+    }
+
+    .ranking-table-my-position {
+        margin-left: auto;
+    }
+
+    .ranking-chip {
+        padding: 2px 8px;
+        background: var(--chip-bg);
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--fg-2);
+    }
+
+    /* Table overrides */
+    .ranking-table-container :deep .bb-table {
+        margin: 0;
+    }
+
+    .ranking-table-container :deep th {
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--fg-3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .ranking-table-container :deep td {
+        padding: 12px;
+        color: var(--fg-2);
+    }
+
+    .col-rank {
+        width: 50px;
+        padding-left: 24px !important;
+    }
+
+    .col-rank :deep th {
+        padding-left: 24px !important;
+    }
+
+    .col-member {
+        flex: 1;
+    }
+
+    .col-score,
+    .col-trend,
+    .col-total {
+        text-align: right;
+    }
+
+    .col-total {
+        padding-right: 24px !important;
+        width: 80px;
+    }
+
+    .col-score :deep th {
+        text-align: right;
+    }
+
+    .col-trend :deep th,
+    .col-total :deep th {
+        text-align: right;
+    }
+
+    /* Row styling */
+    .ranking-table-container :deep tr.is-me {
+        background: color-mix(in oklab, var(--brand-strong) 6%, transparent);
+    }
+
+    .member-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .member-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .member-name {
+        font-weight: 500;
+        color: var(--fg);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .member-name.is-me {
+        font-weight: 600;
+    }
+
+    .member-badge {
+        font-size: 10px;
+        color: var(--fg-3);
+    }
+
+    .member-tie-badge {
+        padding: 2px 6px !important;
+        font-size: 9px;
+    }
+
+    .member-matches {
+        font-size: 11px;
+        color: var(--fg-3);
+    }
+
+    /* Rank styling */
+    .rank-number {
+        color: var(--fg-2);
+        font-weight: 500;
+    }
+
+    .rank-number.rank-first {
+        color: var(--brand-strong);
+        font-weight: 600;
+    }
+
+    /* Score styling */
+    .col-score.score-highlight {
+        color: var(--brand-strong);
+        font-weight: 600;
+    }
+
+    /* Trend styling */
+    .trend-positive {
+        color: var(--success);
+        font-weight: 500;
+    }
+
+    .trend-neutral {
+        color: var(--fg-3);
+    }
+
+    /* Total styling */
+    .col-total {
+        font-size: 17px;
+        font-weight: 600;
+    }
+
+    .col-total.total-highlight {
+        color: var(--brand-strong);
+    }
+</style>

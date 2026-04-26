@@ -1,0 +1,50 @@
+@* Form with email and password input fields *@
+<div class="auth-form">
+    <div class="auth-form-field">
+        <div class="bb-field-label">@EmailLabel</div>
+        <input class="bb-input"
+               type="email"
+               placeholder="@EmailPlaceholder"
+               @bind="Email"
+               @bind:event="oninput"
+               disabled="@Disabled" />
+    </div>
+    <div class="auth-form-field">
+        <div class="bb-field-label">@PasswordLabel</div>
+        <input class="bb-input"
+               type="password"
+               placeholder="@PasswordPlaceholder"
+               @bind="Password"
+               @bind:event="oninput"
+               disabled="@Disabled" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Email { get; set; } = "";
+    [Parameter] public EventCallback<string> EmailChanged { get; set; }
+
+    [Parameter] public string Password { get; set; } = "";
+    [Parameter] public EventCallback<string> PasswordChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string EmailLabel { get; set; } = "E-mail";
+    [Parameter] public string EmailPlaceholder { get; set; } = "voce@email.com";
+    [Parameter] public string PasswordLabel { get; set; } = "Senha";
+    [Parameter] public string PasswordPlaceholder { get; set; } = "••••••••";
+}
+
+<style>
+    .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .auth-form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+</style>

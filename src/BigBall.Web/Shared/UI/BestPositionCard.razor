@@ -1,0 +1,49 @@
+<div class="best-position-card">
+    @if (BestPool is not null)
+    {
+        <div class="best-position-label">Sua melhor posição</div>
+        <div class="best-position-content">
+            <div class="best-position-rank">#@BestPool.MyRank</div>
+        </div>
+        <div class="best-position-details">@BestPool.Name · @BestPool.MyPoints pts</div>
+    }
+</div>
+
+@code {
+    [Parameter] public dynamic? BestPool { get; set; }
+}
+
+<style>
+    .best-position-card {
+        /* Inherits .bb-dcard styles from parent */
+    }
+
+    .best-position-label {
+        font-size: 11px;
+        color: var(--fg-3);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .best-position-content {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .best-position-rank {
+        font-family: var(--font-display);
+        font-size: 52px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: var(--brand-strong);
+    }
+
+    .best-position-details {
+        font-size: 13px;
+        color: var(--fg-2);
+        margin-top: 4px;
+    }
+</style>

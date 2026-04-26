@@ -1,0 +1,154 @@
+@* Hero section with avatar, name, handle, email, metadata, and KPIs *@
+<div class="profile-hero">
+    <div class="profile-hero-container">
+        <div class="profile-hero-left">
+            <div class="profile-hero-avatar">
+                <Avatar Name="@Name" Size="104" />
+            </div>
+            <div class="profile-hero-info">
+                <div class="profile-hero-name-row">
+                    <div class="profile-hero-name">@Name</div>
+                    <span class="profile-hero-handle">@Handle</span>
+                </div>
+                <div class="profile-hero-metadata">
+                    <div class="profile-hero-metadata-item">@Email</div>
+                    <div class="profile-hero-metadata-sep">·</div>
+                    <div class="profile-hero-metadata-item">@MemberSince</div>
+                    <div class="profile-hero-metadata-sep">·</div>
+                    <div class="profile-hero-metadata-item">
+                        <Icon Path="@IconPaths.Globe" Size="14" /> @Timezone
+                    </div>
+                </div>
+                <div class="profile-hero-badges">
+                    @if (!string.IsNullOrEmpty(AdminOfLabel))
+                    {
+                        <span class="profile-hero-badge admin">@AdminOfLabel</span>
+                    }
+                    @if (!string.IsNullOrEmpty(MemberLabel))
+                    {
+                        <span class="profile-hero-badge member">@MemberLabel</span>
+                    }
+                </div>
+            </div>
+        </div>
+        @if (KpiItems != null && KpiItems.Count > 0)
+        {
+            <ProfileKpis Items="@KpiItems" />
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+    [Parameter] public string Handle { get; set; } = "";
+    [Parameter] public string Email { get; set; } = "";
+    [Parameter] public string MemberSince { get; set; } = "";
+    [Parameter] public string Timezone { get; set; } = "";
+    [Parameter] public string? AdminOfLabel { get; set; }
+    [Parameter] public string? MemberLabel { get; set; }
+    [Parameter] public IReadOnlyList<ProfileKpis.KpiItem>? KpiItems { get; set; }
+}
+
+<style>
+    .profile-hero {
+        padding: 0 40px 24px;
+    }
+
+    .profile-hero-container {
+        padding: 28px 32px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        background: linear-gradient(120deg, color-mix(in oklab, var(--brand-strong) 14%, var(--bg-elev)) 0%, var(--bg-elev) 55%);
+        border: 1px solid color-mix(in oklab, var(--brand-strong) 22%, var(--line));
+        border-radius: 12px;
+    }
+
+    .profile-hero-left {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        flex: 1;
+    }
+
+    .profile-hero-avatar {
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .profile-hero-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .profile-hero-name-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .profile-hero-name {
+        font-family: var(--font-display);
+        font-size: 36px;
+        font-weight: 600;
+        letter-spacing: -0.025em;
+        line-height: 1.1;
+    }
+
+    .profile-hero-handle {
+        font-size: 10px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: var(--chip-bg);
+        color: var(--fg-2);
+        letter-spacing: 0.04em;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .profile-hero-metadata {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+
+    .profile-hero-metadata-item {
+        font-size: 13px;
+        color: var(--fg-2);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .profile-hero-metadata-sep {
+        font-size: 13px;
+        color: var(--fg-3);
+    }
+
+    .profile-hero-badges {
+        display: flex;
+        gap: 6px;
+        margin-top: 12px;
+    }
+
+    .profile-hero-badge {
+        font-size: 11px;
+        padding: 4px 9px;
+        border-radius: 6px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .profile-hero-badge.admin {
+        background: color-mix(in oklab, var(--brand-strong) 18%, transparent);
+        color: var(--brand-strong);
+    }
+
+    .profile-hero-badge.member {
+        background: var(--chip-bg);
+        color: var(--fg-2);
+    }
+</style>

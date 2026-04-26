@@ -1,0 +1,103 @@
+@* Card showing points distribution by scoring tier with progress bars *@
+<div class="bb-dcard">
+    <div class="bb-dcard-h">
+        <div class="bb-dcard-title">@Title</div>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <span class="bb-dcard-link" style="font-size:11px;color:var(--fg-3);">@Subtitle</span>
+        }
+    </div>
+    <div class="scoring-bands-content">
+        @foreach (var band in Items)
+        {
+            <div class="scoring-band-row">
+                <div class="scoring-band-points" style="color: @(band.Points == 20 ? "var(--brand-strong)" : "var(--fg)");">@band.Points</div>
+                <div class="scoring-band-info">
+                    <div class="scoring-band-label">@band.Label</div>
+                    <div class="scoring-band-bar-container">
+                        <div class="scoring-band-bar-bg">
+                            <div class="scoring-band-bar-fill" style="width:@(MaxCount > 0 ? (band.Count * 100 / MaxCount) : 0)%;background:@GetBarColor(band.Points);"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="scoring-band-count">@(band.Count)×</div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    public record BandItem(int Points, string Label, int Count);
+
+    [Parameter] public string Title { get; set; } = "Pontos por faixa";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public IReadOnlyList<BandItem> Items { get; set; } = [];
+
+    private int MaxCount => Items.Count > 0 ? Items.Max(b => b.Count) : 0;
+
+    private string GetBarColor(int points) => points switch
+    {
+        20        => "var(--brand-strong)",
+        >= 15     => "color-mix(in oklab, var(--brand-strong) 70%, var(--brand))",
+        >= 10     => "var(--brand)",
+        >= 5      => "color-mix(in oklab, var(--brand) 60%, var(--fg-3))",
+        _         => "var(--fg-3)",
+    };
+}
+
+<style>
+    .scoring-bands-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .scoring-band-row {
+        display: grid;
+        grid-template-columns: 36px 1fr 28px;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 0;
+    }
+
+    .scoring-band-points {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        font-size: 15px;
+    }
+
+    .scoring-band-info {
+        flex: 1;
+    }
+
+    .scoring-band-label {
+        font-size: 11px;
+        color: var(--fg-3);
+        margin-bottom: 4px;
+    }
+
+    .scoring-band-bar-container {
+        height: 6px;
+        background: var(--chip-bg);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .scoring-band-bar-bg {
+        height: 100%;
+        width: 100%;
+    }
+
+    .scoring-band-bar-fill {
+        height: 100%;
+    }
+
+    .scoring-band-count {
+        font-size: 12px;
+        color: var(--fg-2);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-weight: 500;
+    }
+</style>

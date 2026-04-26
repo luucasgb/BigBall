@@ -1,0 +1,30 @@
+<div class="summary-card">
+    <div class="bb-dcard-h">
+        <div class="bb-dcard-title">Resumo</div>
+    </div>
+    <div class="summary-card-content">@PoolCount bolão(ões) ativo(s)</div>
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="summary-card-error">@ErrorMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public int PoolCount { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+}
+
+<style>
+    .summary-card {
+        /* Inherits .bb-dcard styles from parent */
+    }
+
+    .summary-card-content {
+        font-size: 13px;
+        color: var(--fg-2);
+    }
+
+    .summary-card-error {
+        margin-top: 8px;
+    }
+</style>

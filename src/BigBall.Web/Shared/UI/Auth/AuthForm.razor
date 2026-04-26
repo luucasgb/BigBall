@@ -1,23 +1,17 @@
 @* Form with email and password input fields *@
 <div class="auth-form">
-    <div class="auth-form-field">
-        <div class="bb-field-label">@EmailLabel</div>
-        <input class="bb-input"
-               type="email"
-               placeholder="@EmailPlaceholder"
-               @bind="Email"
-               @bind:event="oninput"
-               disabled="@Disabled" />
-    </div>
-    <div class="auth-form-field">
-        <div class="bb-field-label">@PasswordLabel</div>
-        <input class="bb-input"
-               type="password"
-               placeholder="@PasswordPlaceholder"
-               @bind="Password"
-               @bind:event="oninput"
-               disabled="@Disabled" />
-    </div>
+    <AuthFormField Label="@EmailLabel"
+                   Type="email"
+                   Placeholder="@EmailPlaceholder"
+                   Value="@Email"
+                   ValueChanged="EmailChanged"
+                   Disabled="@Disabled" />
+    <AuthFormField Label="@PasswordLabel"
+                   Type="password"
+                   Placeholder="@PasswordPlaceholder"
+                   Value="@Password"
+                   ValueChanged="PasswordChanged"
+                   Disabled="@Disabled" />
 </div>
 
 @code {
@@ -40,11 +34,5 @@
         display: flex;
         flex-direction: column;
         gap: 14px;
-    }
-
-    .auth-form-field {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
     }
 </style>

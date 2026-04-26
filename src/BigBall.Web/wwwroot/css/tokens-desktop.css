@@ -220,13 +220,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  scrollbar-gutter: stable;
 }
 .bb-auth-card {
-  width: 420px;
+  width: 100%;
+  max-width: 420px;
   background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -234,4 +237,13 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  box-sizing: border-box;
+}
+
+.bb-auth-card .bb-error {
+  margin-top: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--danger) 40%, var(--line));
+  background: color-mix(in oklab, var(--danger) 14%, transparent);
 }

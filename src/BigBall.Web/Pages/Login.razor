@@ -4,11 +4,7 @@
 
 <div class="bb-auth-page theme-dark">
     <AuthCard Subtitle="Entre com seu e-mail para acompanhar seus bolões.">
-        <AuthForm Email="@VM.Email"
-                  EmailChanged="v => { VM.Email = v; }"
-                  Password="@VM.Password"
-                  PasswordChanged="v => { VM.Password = v; }"
-                  Disabled="@VM.IsBusy" />
+        <AuthForm @bind-Email="VM.Email" @bind-Password="VM.Password" Disabled="@VM.IsBusy" />
 
         <ErrorAlert Message="@VM.ErrorMessage" />
 

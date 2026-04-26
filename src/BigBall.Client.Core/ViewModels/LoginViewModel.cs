@@ -36,8 +36,8 @@ public partial class LoginViewModel : ViewModelBase
             ErrorMessage = "Informe e-mail e senha.";
             return;
         }
-        var response = await _auth.LoginAsync(new LoginRequest(Email.Trim(), Password), token).ConfigureAwait(false);
-        await _tokens.SetTokenAsync(response.Token, token).ConfigureAwait(false);
+        var response = await _auth.LoginAsync(new LoginRequest(Email.Trim(), Password), token);
+        await _tokens.SetTokenAsync(response.Token, token);
         Profile = response.Profile;
         _navigator.NavigateTo("/", replace: true);
     }, ct);

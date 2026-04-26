@@ -10,16 +10,9 @@
         <DesktopTopbar />
         <div class="bb-content">
 
-            <div class="bb-page-h">
-                <div style="flex:1;">
-                    <div class="bb-page-eyebrow">BigBall · Copa do Mundo 2026</div>
-                    <div class="bb-page-title">Início</div>
-                    @if (VM.FeaturedNextMatch is { } fn)
-                    {
-                        <div class="bb-page-sub">@VM.Pools.Count bolão(ões) ativo(s) · próximo palpite fecha em @FormatKickoff(fn.KickoffUtc)</div>
-                    }
-                </div>
-            </div>
+            <PageHeader Title="Início"
+                        Eyebrow="BigBall · Copa do Mundo 2026"
+                        Subtitle="@(VM.FeaturedNextMatch is { } fn ? $"{VM.Pools.Count} bolão(ões) ativo(s) · próximo palpite fecha em {FormatKickoff(fn.KickoffUtc)}" : null)" />
 
             <div style="padding:0 40px 24px;display:grid;grid-template-columns:2fr 1fr;gap:20px;">
 

@@ -5,18 +5,15 @@
     <main class="bb-main">
         <DesktopTopbar Placeholder="Buscar partida ou seleção…" />
 
-        <div class="bb-page-h">
-            <div style="flex:1;">
-                <div class="bb-page-eyebrow">Junho 2026 · Fase de grupos · Rodada 2</div>
-                <div class="bb-page-title">Calendário</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-                <button class="bb-topbar-btn" style="width:38px;padding:0;"><Icon Path="@IconPaths.ChevronL" Size="18" /></button>
-                <button class="bb-topbar-btn" style="width:38px;padding:0;"><Icon Path="@IconPaths.Chevron" Size="18" /></button>
+        <PageHeader Title="Calendário"
+                    Eyebrow="Junho 2026 · Fase de grupos · Rodada 2">
+            <Actions>
+                <button class="bb-topbar-btn bb-topbar-btn-icon"><Icon Path="@IconPaths.ChevronL" Size="18" /></button>
+                <button class="bb-topbar-btn bb-topbar-btn-icon"><Icon Path="@IconPaths.Chevron" Size="18" /></button>
                 <button class="bb-topbar-btn">Hoje</button>
                 <button class="bb-topbar-btn"><Icon Path="@IconPaths.Filter" Size="16" /> Bolão</button>
-            </div>
-        </div>
+            </Actions>
+        </PageHeader>
 
         <DayPicker Items="@Days.Select(d => new DayPicker.DayPickerItem(d.DayName, d.DayNum, d.Label, d.MatchCount)).ToList()"
                    Selected="@SelectedDay"
@@ -165,6 +162,11 @@
 }
 
 <style>
+    .bb-topbar-btn-icon {
+        width: 38px;
+        padding: 0;
+    }
+
     .calendar-layout {
         flex: 1;
         padding: 0 40px 40px;

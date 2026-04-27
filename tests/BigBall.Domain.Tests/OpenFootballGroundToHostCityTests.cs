@@ -50,13 +50,13 @@ public class OpenFootballGroundToHostCityTests
         var d = new DirectoryInfo(AppContext.BaseDirectory);
         while (d is not null)
         {
-            var p = Path.Combine(d.FullName, "src", "BigBall.Api", "Data", "Fixtures", "worldcup-2026.json");
+            var p = Path.Combine(d.FullName, "src", "BigBall.Api", "Data", "worldcup-2026.json");
             if (File.Exists(p))
             {
                 return p;
             }
 
-            p = Path.Combine(d.FullName, "BigBall.Api", "Data", "Fixtures", "worldcup-2026.json");
+            p = Path.Combine(d.FullName, "BigBall.Api", "Data", "worldcup-2026.json");
             if (File.Exists(p))
             {
                 return p;

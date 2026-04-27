@@ -84,3 +84,6 @@ wwwroot/_framework/
 
 # Cursor local files
 .cursor/
+
+# Googleusercontent local files
+*googleusercontent*

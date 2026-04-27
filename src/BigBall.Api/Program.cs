@@ -10,6 +10,12 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    // Must run before any reads of values supplied only via user secrets (e.g. Supabase:ProjectUrl).
+    if (builder.Environment.IsDevelopment())
+    {
+        builder.Configuration.AddUserSecrets<Program>();
+    }
+
     builder.Logging.ClearProviders();
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration));

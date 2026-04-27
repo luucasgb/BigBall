@@ -6,7 +6,10 @@
         </div>
         <div class="auth-card-title">BigBall</div>
     </div>
-    <p class="auth-card-subtitle">@Subtitle</p>
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <p class="auth-card-subtitle">@Subtitle</p>
+    }
     @ChildContent
 </div>
 

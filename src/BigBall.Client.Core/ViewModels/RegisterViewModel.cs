@@ -76,6 +76,8 @@ public partial class RegisterViewModel : ViewModelBase
             var addr = response.PendingEmail ?? Email.Trim();
             SuccessMessage =
                 $"Enviamos um link de confirmação para {addr}. Abra o e-mail para ativar sua conta e depois faça login.";
+            Password = string.Empty;
+            ConfirmPassword = string.Empty;
         }
     }, ct);
 }

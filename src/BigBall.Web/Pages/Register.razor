@@ -3,56 +3,63 @@
 @implements IDisposable
 
 <div class="bb-auth-page theme-dark">
-    <AuthCard Subtitle="Crie sua conta com e-mail e senha para participar dos bolões.">
-        <div class="auth-form">
-            <AuthFormField Label="E-mail"
-                           Type="email"
-                           Placeholder="voce@email.com"
-                           Value="@VM.Email"
-                           ValueChanged="v => VM.Email = v"
-                           Disabled="@VM.IsBusy" />
-            <AuthFormField Label="Nome (opcional)"
-                           Type="text"
-                           Placeholder="Como quer ser chamado"
-                           Value="@VM.DisplayName"
-                           ValueChanged="v => VM.DisplayName = v"
-                           Disabled="@VM.IsBusy" />
-            <AuthFormField Label="Senha"
-                           Type="password"
-                           Placeholder="••••••••"
-                           Value="@VM.Password"
-                           ValueChanged="v => VM.Password = v"
-                           Disabled="@VM.IsBusy" />
-            <AuthFormField Label="Confirmar senha"
-                           Type="password"
-                           Placeholder="••••••••"
-                           Value="@VM.ConfirmPassword"
-                           ValueChanged="v => VM.ConfirmPassword = v"
-                           Disabled="@VM.IsBusy" />
-        </div>
-
-        <ErrorAlert Message="@VM.ErrorMessage" />
-
-        @if (!string.IsNullOrWhiteSpace(VM.SuccessMessage))
+    <AuthCard Subtitle="@FormSubtitle">
+        @if (string.IsNullOrWhiteSpace(VM.SuccessMessage))
         {
-            <div class="auth-success">@VM.SuccessMessage</div>
+            <div class="auth-form">
+                <AuthFormField Label="E-mail"
+                               Type="email"
+                               Placeholder="voce@email.com"
+                               Value="@VM.Email"
+                               ValueChanged="v => VM.Email = v"
+                               Disabled="@VM.IsBusy" />
+                <AuthFormField Label="Nome (opcional)"
+                               Type="text"
+                               Placeholder="Como quer ser chamado"
+                               Value="@VM.DisplayName"
+                               ValueChanged="v => VM.DisplayName = v"
+                               Disabled="@VM.IsBusy" />
+                <AuthFormField Label="Senha"
+                               Type="password"
+                               Placeholder="••••••••"
+                               Value="@VM.Password"
+                               ValueChanged="v => VM.Password = v"
+                               Disabled="@VM.IsBusy" />
+                <AuthFormField Label="Confirmar senha"
+                               Type="password"
+                               Placeholder="••••••••"
+                               Value="@VM.ConfirmPassword"
+                               ValueChanged="v => VM.ConfirmPassword = v"
+                               Disabled="@VM.IsBusy" />
+            </div>
+
+            <ErrorAlert Message="@VM.ErrorMessage" />
+
+            <AuthButton Label="Cadastrar"
+                        BusyLabel="Cadastrando…"
+                        IsBusy="@VM.IsBusy"
+                        Disabled="@(!VM.RegisterCommand.CanExecute(null))"
+                        OnClick="ExecuteRegister" />
+
+            <p class="auth-switch">
+                <a class="auth-switch-link" href="/login">Já tem conta? Entrar</a>
+            </p>
+
+            <AuthFooter>O mesmo login Supabase: após confirmar o e-mail (se exigido), use &quot;Entrar&quot;.</AuthFooter>
         }
-
-        <AuthButton Label="Cadastrar"
-                    BusyLabel="Cadastrando…"
-                    IsBusy="@VM.IsBusy"
-                    Disabled="@(!VM.RegisterCommand.CanExecute(null))"
-                    OnClick="ExecuteRegister" />
-
-        <p class="auth-switch">
-            <a class="auth-switch-link" href="/login">Já tem conta? Entrar</a>
-        </p>
-
-        <AuthFooter>O mesmo login Supabase: após confirmar o e-mail (se exigido), use &quot;Entrar&quot;.</AuthFooter>
+        else
+        {
+            <RegistrationEmailSentPanel Message="@VM.SuccessMessage" />
+        }
     </AuthCard>
 </div>
 
 @code {
+    private const string FormSubtitleText = "Crie sua conta com e-mail e senha para participar dos bolões.";
+
+    private string FormSubtitle =>
+        string.IsNullOrWhiteSpace(VM.SuccessMessage) ? FormSubtitleText : "";
+
     protected override void OnInitialized() => VM.PropertyChanged += OnVmChanged;
 
     private void OnVmChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
@@ -67,17 +74,6 @@
         display: flex;
         flex-direction: column;
         gap: 14px;
-    }
-
-    .auth-success {
-        margin: 0;
-        padding: 10px 12px;
-        border-radius: 10px;
-        border: 1px solid color-mix(in oklab, var(--success) 45%, var(--line));
-        background: color-mix(in oklab, var(--success) 12%, transparent);
-        color: var(--fg);
-        font-size: 14px;
-        line-height: 1.45;
     }
 
     .auth-switch {

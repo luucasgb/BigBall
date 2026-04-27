@@ -54,6 +54,8 @@ public class RegisterViewModelTests
         Assert.Null(vm.ErrorMessage);
         Assert.NotNull(vm.SuccessMessage);
         Assert.Contains("a@b.com", vm.SuccessMessage, StringComparison.Ordinal);
+        Assert.Empty(vm.Password);
+        Assert.Empty(vm.ConfirmPassword);
     }
 
     [Fact]

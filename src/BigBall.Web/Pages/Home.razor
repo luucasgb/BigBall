@@ -15,33 +15,14 @@
                         Eyebrow="BigBall · Copa do Mundo 2026"
                         Subtitle="@(VM.FeaturedNextMatch is { } fn ? $"{VM.Pools.Count} bolão(ões) ativo(s) · próximo palpite fecha em {TimeFormatting.FormatKickoff(fn.KickoffUtc)}" : null)" />
 
-            <div class="home-featured-section">
-                <div class="home-featured-main">
+            <div class="home-cols">
+                <div class="home-col-main">
                     <div class="bb-dcard">
                         <FeaturedMatchCard Next="@VM.FeaturedNextMatch"
                                           Featured="@VM.FeaturedPool"
                                           IsBusy="@VM.IsBusy"
                                           OnPredictionClick="() => VM.OpenFeaturedPredictionCommand.Execute(null)" />
                     </div>
-                </div>
-
-                <div class="home-featured-sidebar">
-                    @if (VM.Pools.Count > 0)
-                    {
-                        var best = VM.Pools.OrderBy(p => p.MyRank).First();
-                        <div class="bb-dcard">
-                            <BestPositionCard BestPool="@best" />
-                        </div>
-                    }
-                    <div class="bb-dcard">
-                        <SummaryCard PoolCount="@VM.Pools.Count"
-                                    ErrorMessage="@VM.ErrorMessage" />
-                    </div>
-                </div>
-            </div>
-
-            <div class="home-content-section">
-                <div class="home-content-main">
                     <div class="bb-dcard">
                         <PoolsTable Pools="@VM.Pools"
                                    IsBusy="@VM.IsBusy"
@@ -49,8 +30,19 @@
                     </div>
                 </div>
 
-                <div class="home-content-sidebar">
-                    <div class="bb-dcard">
+                <div class="home-col-sidebar">
+                    @if (VM.Pools.Count > 0)
+                    {
+                        var best = VM.Pools.OrderBy(p => p.MyRank).First();
+                        <div class="bb-dcard">
+                            <BestPositionCard BestPool="@best" />
+                        </div>
+                    }
+                    <div class="bb-dcard home-sidebar-grow">
+                        <SummaryCard PoolCount="@VM.Pools.Count"
+                                    ErrorMessage="@VM.ErrorMessage" />
+                    </div>
+                    <div class="bb-dcard home-sidebar-grow">
                         <ActivityFeed />
                     </div>
                 </div>
@@ -90,35 +82,38 @@
 }
 
 <style>
-    .home-featured-section {
-        padding: 0 40px 24px;
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 20px;
-    }
-
-    .home-featured-main {
-        /* Contains FeaturedMatchCard in .bb-dcard */
-    }
-
-    .home-featured-sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    .home-content-section {
+    .home-cols {
         padding: 0 40px 40px;
         display: grid;
         grid-template-columns: 2fr 1fr;
         gap: 20px;
+        align-items: stretch;
     }
 
-    .home-content-main {
-        /* Contains PoolsTable in .bb-dcard */
+    .home-col-main {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        min-width: 0;
     }
 
-    .home-content-sidebar {
-        /* Contains ActivityFeed in .bb-dcard */
+    .home-col-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .home-sidebar-grow {
+        flex: 1 1 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .home-sidebar-grow > :first-child {
+        flex: 1;
+        min-height: 0;
     }
 </style>

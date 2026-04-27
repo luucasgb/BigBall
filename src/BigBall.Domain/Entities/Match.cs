@@ -15,6 +15,8 @@ public sealed class Match
 
     public required DateTime KickoffUtc { get; set; }
     public string? Venue { get; set; }
+    public int? HostCityId { get; set; }
+    public HostCity? HostCity { get; set; }
     public MatchStatus Status { get; set; } = MatchStatus.Scheduled;
 
     public int? ReferenceHome { get; set; }
@@ -23,7 +25,9 @@ public sealed class Match
     public bool WentToPenalties { get; set; }
     public string? PenaltyWinnerCode { get; set; }
 
-    public DateTime LockUtc => KickoffUtc.AddMinutes(-5);
-    public bool IsLocked(DateTime nowUtc) => nowUtc >= LockUtc;
+    /// <summary>Instant when predictions close: same as <see cref="KickoffUtc"/> (official start).</summary>
+    public DateTime LockUtc => KickoffUtc;
+
+    public bool IsLocked(DateTime nowUtc) => nowUtc >= KickoffUtc;
     public bool HasReferenceScore => ReferenceHome is not null && ReferenceAway is not null;
 }

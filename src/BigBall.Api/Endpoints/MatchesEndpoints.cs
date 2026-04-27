@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BigBall.Api.Data;
+using BigBall.Domain.Entities;
 using BigBall.Shared.Dtos;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,6 +28,7 @@ public static class MatchesEndpoints
 
             var matches = await db.Matches
                 .AsNoTracking()
+                .Include(m => m.HostCity)
                 .Where(m => m.KickoffUtc >= from && m.KickoffUtc <= to)
                 .OrderBy(m => m.KickoffUtc)
                 .ToListAsync(ct);
@@ -39,6 +41,7 @@ public static class MatchesEndpoints
                     m.AwayCode,
                     m.KickoffUtc,
                     m.Venue,
+                    MapHostCity(m.HostCity),
                     m.Status.ToString()))
                 .ToList();
             return Results.Ok(rows);
@@ -49,7 +52,10 @@ public static class MatchesEndpoints
         {
             var userId = user.RequireUserId();
 
-            var match = await db.Matches.FirstOrDefaultAsync(m => m.Id == matchId, ct);
+            var match = await db.Matches
+                .AsNoTracking()
+                .Include(m => m.HostCity)
+                .FirstOrDefaultAsync(m => m.Id == matchId, ct);
             if (match is null)
             {
                 return Results.NotFound(new { error = "Partida não encontrada." });
@@ -80,6 +86,7 @@ public static class MatchesEndpoints
                 match.KickoffUtc,
                 match.LockUtc,
                 match.Venue,
+                MapHostCity(match.HostCity),
                 match.Status.ToString(),
                 match.ReferenceHome,
                 match.ReferenceAway,
@@ -93,4 +100,9 @@ public static class MatchesEndpoints
 
         return app;
     }
+
+    private static HostCityDto? MapHostCity(HostCity? h) =>
+        h is null
+            ? null
+            : new HostCityDto(h.Id, h.CityName, h.Country, h.VenueName, h.RegionCluster, h.AirportCode);
 }

@@ -32,7 +32,7 @@ public class PredictViewModelTests
     public async Task LoadAsync_AfterLockWindow_DisablesSave()
     {
         var now = new DateTime(2026, 06, 10, 14, 00, 00, DateTimeKind.Utc);
-        var kickoff = now.AddMinutes(2); // inside lock window (T−5min)
+        var kickoff = now; // lock at kickoff → already past start for prediction window
         var matches = new FakeMatchesApi(BuildScheduledMatch(kickoff));
         var vm = NewVm(matches, new FakePredictionsApi(), now);
 
@@ -77,8 +77,9 @@ public class PredictViewModelTests
         HomeCode: "ARG",
         AwayCode: "CAN",
         KickoffUtc: kickoff,
-        LockUtc: kickoff.AddMinutes(-5),
+        LockUtc: kickoff,
         Venue: null,
+        HostCity: null,
         Status: "Scheduled",
         ReferenceHome: refHome,
         ReferenceAway: refAway,
@@ -93,8 +94,9 @@ public class PredictViewModelTests
         HomeCode: "ARG",
         AwayCode: "MEX",
         KickoffUtc: kickoff,
-        LockUtc: kickoff.AddMinutes(-5),
+        LockUtc: kickoff,
         Venue: null,
+        HostCity: null,
         Status: "Scheduled",
         ReferenceHome: null,
         ReferenceAway: null,

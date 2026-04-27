@@ -11,6 +11,7 @@ public sealed class BigBallDbContext : DbContext
     public DbSet<Pool> Pools => Set<Pool>();
     public DbSet<PoolMembership> PoolMemberships => Set<PoolMembership>();
     public DbSet<Match> Matches => Set<Match>();
+    public DbSet<HostCity> HostCities => Set<HostCity>();
     public DbSet<Prediction> Predictions => Set<Prediction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -44,6 +45,18 @@ public sealed class BigBallDbContext : DbContext
             entity.HasIndex(x => x.InviteCode).IsUnique();
         });
 
+        modelBuilder.Entity<HostCity>(entity =>
+        {
+            entity.ToTable("host_cities");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(x => x.CityName).HasColumnName("city_name").HasMaxLength(80);
+            entity.Property(x => x.Country).HasColumnName("country").HasMaxLength(64);
+            entity.Property(x => x.VenueName).HasColumnName("venue_name").HasMaxLength(120);
+            entity.Property(x => x.RegionCluster).HasColumnName("region_cluster").HasMaxLength(32);
+            entity.Property(x => x.AirportCode).HasColumnName("airport_code").HasMaxLength(8);
+        });
+
         modelBuilder.Entity<PoolMembership>(entity =>
         {
             entity.ToTable("pool_memberships");
@@ -69,6 +82,12 @@ public sealed class BigBallDbContext : DbContext
             entity.Property(x => x.KickoffUtc).HasColumnName("kickoff_utc");
             entity.HasIndex(x => x.ExternalKey).IsUnique();
             entity.Property(x => x.Venue).HasColumnName("venue").HasMaxLength(200);
+            entity.Property(x => x.HostCityId).HasColumnName("host_city_id");
+            entity.HasIndex(x => x.HostCityId);
+            entity.HasOne(x => x.HostCity)
+                .WithMany(x => x.Matches)
+                .HasForeignKey(x => x.HostCityId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(24);
             entity.Property(x => x.ReferenceHome).HasColumnName("reference_home");
             entity.Property(x => x.ReferenceAway).HasColumnName("reference_away");

@@ -81,6 +81,7 @@ try
         var config = sp.GetRequiredService<IConfiguration>();
         var env = sp.GetRequiredService<IWebHostEnvironment>();
         var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("BigBall.Api.Fixtures");
+        await HostCitiesSeeder.SeedAsync(db, env, logger);
         if (config.GetValue("Fixtures:ImportWorldCup2026", false))
         {
             // Single-arg StartsWith is translatable; the StringComparison overload is not.

@@ -1,7 +1,8 @@
 <div class="calendar-detail-header">
     <div class="calendar-detail-chips">
         <span class="bb-chip">@Phase</span>
-        <span class="bb-chip" style="margin-left:auto;"><Icon Path="@IconPaths.Lock" Size="12" /> Fecha @Time</span>
+        <div class="calendar-detail-chips-spacer"></div>
+        <PredictionLockCountdownChip KickoffUtc="@KickoffUtc" />
     </div>
     <div class="calendar-detail-teams">
         <div class="calendar-detail-team">
@@ -9,8 +10,12 @@
             <div class="calendar-detail-team-name">@HomeName</div>
         </div>
         <div class="calendar-detail-vs">
-            <div class="calendar-detail-date">14 jun · @Time</div>
+            <div class="calendar-detail-date">@CenterDateLine</div>
             <div class="calendar-detail-vs-label">vs</div>
+            @if (!string.IsNullOrEmpty(VenueLine))
+            {
+                <div class="calendar-detail-venue">@VenueLine</div>
+            }
         </div>
         <div class="calendar-detail-team">
             <Flag Code="@AwayCode" Size="64" />
@@ -21,7 +26,9 @@
 
 @code {
     [Parameter] public string Phase { get; set; } = "";
-    [Parameter] public string Time { get; set; } = "";
+    [Parameter] public DateTime KickoffUtc { get; set; }
+    [Parameter] public string CenterDateLine { get; set; } = "";
+    [Parameter] public string? VenueLine { get; set; }
     [Parameter] public string HomeCode { get; set; } = "";
     [Parameter] public string AwayCode { get; set; } = "";
     [Parameter] public string HomeName { get; set; } = "";
@@ -37,8 +44,14 @@
 
     .calendar-detail-chips {
         display: flex;
+        align-items: center;
         gap: 8px;
         margin-bottom: 14px;
+    }
+
+    .calendar-detail-chips-spacer {
+        flex: 1;
+        min-width: 0;
     }
 
     .calendar-detail-teams {
@@ -71,6 +84,14 @@
     .calendar-detail-date {
         font-size: 11px;
         letter-spacing: 0.08em;
+    }
+
+    .calendar-detail-venue {
+        font-size: 11px;
+        color: var(--fg-2);
+        margin-top: 8px;
+        max-width: 200px;
+        line-height: 1.35;
     }
 
     .calendar-detail-vs-label {

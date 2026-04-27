@@ -8,16 +8,7 @@
         <div class="bb-page-sub">@KickoffUtc.ToLocalTime().ToString("dd/MM HH:mm") · BRT</div>
     </div>
     <div class="match-chip-group">
-        @if (IsLocked)
-        {
-            <span class="bb-chip live">Bloqueado</span>
-        }
-        else
-        {
-            <span class="bb-chip" style="font-variant-numeric:tabular-nums;">
-                <Icon Path="@IconPaths.Lock" Size="12" /> @TimeFormatting.FormatCountdown(SecondsUntilLock)
-            </span>
-        }
+        <PredictionLockCountdownChip KickoffUtc="@KickoffUtc" />
     </div>
 </div>
 
@@ -26,8 +17,6 @@
     [Parameter] public string HomeCode { get; set; } = "";
     [Parameter] public string AwayCode { get; set; } = "";
     [Parameter] public DateTime KickoffUtc { get; set; }
-    [Parameter] public bool IsLocked { get; set; }
-    [Parameter] public int SecondsUntilLock { get; set; }
 }
 
 <style>

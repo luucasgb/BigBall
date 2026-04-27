@@ -48,8 +48,9 @@
                                    AwayCode="@match.AwayCode"
                                    HomeName="@match.HomeName"
                                    AwayName="@match.AwayName"
+                                   VenueLine="@match.VenueLine"
+                                   KickoffUtc="@match.KickoffUtc"
                                    Status="@match.Status"
-                                   ClosesIn="@match.ClosesIn"
                                    Minute="@match.Minute"
                                    LiveHome="@match.LiveHome"
                                    LiveAway="@match.LiveAway"
@@ -64,8 +65,11 @@
             @if (ActiveMatch is { } am)
             {
                 <div class="bb-dcard calendar-detail-card">
-                    <CalendarDetailHeader Phase="@am.Phase"
-                                         Time="@am.Time"
+                    <CalendarDetailHeader @key="am.Id"
+                                         Phase="@am.Phase"
+                                         KickoffUtc="@am.KickoffUtc"
+                                         CenterDateLine="@am.CenterDateLine"
+                                         VenueLine="@am.VenueLine"
                                          HomeCode="@am.HomeCode"
                                          AwayCode="@am.AwayCode"
                                          HomeName="@am.HomeName"
@@ -73,7 +77,7 @@
                     <div class="calendar-detail-body">
                         <PredictionInput HomePrediction="@PredHome"
                                          AwayPrediction="@PredAway"
-                                         IsLocked="false"
+                                         IsLocked="@IsMatchLocked(am)"
                                          IsBusy="false"
                                          HomePredictionChanged="v => PredHome = v"
                                          AwayPredictionChanged="v => PredAway = v" />
@@ -131,7 +135,9 @@
         public string AwayName { get; init; } = "";
         public string Phase { get; init; } = "";
         public string Status { get; init; } = "open";
-        public string? ClosesIn { get; init; }
+        public DateTime KickoffUtc { get; init; }
+        public string CenterDateLine { get; init; } = "";
+        public string? VenueLine { get; init; }
         public string? Minute { get; init; }
         public int LiveHome { get; init; }
         public int LiveAway { get; init; }
@@ -267,6 +273,9 @@
     private static MatchItem MapToItem(MatchCalendarRowDto m)
     {
         var local = ToLocal(m.KickoffUtc);
+        var dayAbbr = PtBr.DateTimeFormat.AbbreviatedDayNames[(int)local.DayOfWeek].TrimEnd('.');
+        var dayPart = string.IsNullOrEmpty(dayAbbr) ? local.ToString("ddd", PtBr) : dayAbbr;
+        var center = $"{dayPart} {local:dd} {local:MMM} · {local:HH:mm}".Trim();
         return new MatchItem
         {
             Id = m.Id,
@@ -277,9 +286,17 @@
             AwayName = WorldCup2026TeamCodes.ToDisplayName(m.AwayCode),
             Phase = string.IsNullOrEmpty(m.GroupLabel) ? m.Phase : m.GroupLabel!,
             Status = MapUiStatus(m.Status),
-            ClosesIn = null,
+            KickoffUtc = AsUtc(m.KickoffUtc),
+            CenterDateLine = center,
+            VenueLine = FormatVenueLine(m)
         };
     }
+
+    private static string? FormatVenueLine(MatchCalendarRowDto m) =>
+        m.HostCity is { } h ? $"{h.CityName} · {h.VenueName}" : m.Venue;
+
+    private static DateTime AsUtc(DateTime t) =>
+        t.Kind == DateTimeKind.Utc ? t : DateTime.SpecifyKind(t, DateTimeKind.Utc);
 
     private static string MapUiStatus(string status) =>
         status switch
@@ -325,6 +342,8 @@
     }
 
     private void SavePrediction() { }
+
+    private static bool IsMatchLocked(MatchItem m) => DateTime.UtcNow >= AsUtc(m.KickoffUtc);
 }
 
 <style>

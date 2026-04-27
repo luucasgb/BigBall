@@ -19,6 +19,11 @@ public static class WorldCup2026FixtureImporter
             return;
         }
 
+        var venueById = await db.HostCities
+            .AsNoTracking()
+            .ToDictionaryAsync(x => x.Id, x => x.VenueName, ct)
+            .ConfigureAwait(false);
+
         foreach (var m in root.matches)
         {
             if (m is not { date: { } d, time: { } t, team1: { } t1, team2: { } t2, round: { } r })
@@ -47,7 +52,18 @@ public static class WorldCup2026FixtureImporter
                 groupLabel = groupLabel[..64];
             }
 
-            var venue = string.IsNullOrWhiteSpace(m.ground) ? null : m.ground.Trim();
+            var ground = string.IsNullOrWhiteSpace(m.ground) ? null : m.ground.Trim();
+            if (ground is { Length: > 200 })
+            {
+                ground = ground[..200];
+            }
+
+            int? hostCityId = OpenFootballGroundToHostCity.TryGetHostCityId(ground);
+            var venue = ground;
+            if (hostCityId is { } hid && venueById.TryGetValue(hid, out var stadiumName))
+            {
+                venue = stadiumName;
+            }
             if (venue is { Length: > 200 })
             {
                 venue = venue[..200];
@@ -62,6 +78,7 @@ public static class WorldCup2026FixtureImporter
                 existing.AwayCode = away;
                 existing.KickoffUtc = kickoffUtc;
                 existing.Venue = venue;
+                existing.HostCityId = hostCityId;
                 existing.Status = MatchStatus.Scheduled;
             }
             else
@@ -76,6 +93,7 @@ public static class WorldCup2026FixtureImporter
                     ExternalKey = ext,
                     KickoffUtc = kickoffUtc,
                     Venue = venue,
+                    HostCityId = hostCityId,
                     Status = MatchStatus.Scheduled,
                 });
             }

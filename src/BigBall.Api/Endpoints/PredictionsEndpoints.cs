@@ -10,7 +10,7 @@ public static class PredictionsEndpoints
 {
     public static IEndpointRouteBuilder MapPredictionsEndpoints(this IEndpointRouteBuilder app)
     {
-        // PRD 4.7: server-side enforcement — PUT returns 409 LOCKED if UtcNow >= LockUtc.
+        // PRD 4.7: lock at kickoff — PUT returns 409 LOCKED if UtcNow >= match.KickoffUtc.
         app.MapPut("/api/pools/{poolId:guid}/matches/{matchId:guid}/prediction",
             async (Guid poolId, Guid matchId, UpsertPredictionRequest req, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
         {

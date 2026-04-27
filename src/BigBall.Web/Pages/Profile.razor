@@ -124,9 +124,7 @@
             var pools = await poolsTask;
 
             _adminOfLabel = null; /* Membro de bolão exige detalhe por bolão; acrescentar quando a API expuser o papel. */
-            _memberLabel = pools.Count == 0
-                ? "Membro · 0 bolões"
-                : $"Membro · {pools.Count} bolão(ões)";
+            _memberLabel = PtCopy.MemberPoolsLine(pools.Count);
 
             _kpiItems = BuildKpiItems(pools);
             _poolItems = pools
@@ -169,7 +167,7 @@
         var best = pools.Min(p => p.MyRank);
         return
         [
-            new("Pontos totais", totalPoints.ToString(CultureInfo.InvariantCulture), $"em {pools.Count} bolão(ões)", IsHighlight: true),
+            new("Pontos totais", totalPoints.ToString(CultureInfo.InvariantCulture), PtCopy.InPoolsFooter(pools.Count), IsHighlight: true),
             new("Melhor posição", $"#{best}", "menor # entre teus bolões"),
             new("Placar exato", "—", "em breve"),
             new("Bônus pênaltis", "—", "em breve")

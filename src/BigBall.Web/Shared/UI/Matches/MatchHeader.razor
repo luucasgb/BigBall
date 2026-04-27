@@ -1,16 +1,12 @@
-<div class="match-header">
-    <div class="match-title-group">
-        @if (!string.IsNullOrEmpty(Phase))
-        {
-            <div class="bb-page-eyebrow">@Phase</div>
-        }
-        <div class="bb-page-title">Palpite · @HomeCode × @AwayCode</div>
-        <div class="bb-page-sub">@KickoffUtc.ToLocalTime().ToString("dd/MM HH:mm") · BRT</div>
-    </div>
-    <div class="match-chip-group">
+@* Match context for the predict flow; uses PageHeader so spacing matches other desktop pages. *@
+
+<PageHeader Title="@($"Palpite · {HomeCode} × {AwayCode}")"
+            Eyebrow="@Phase"
+            Subtitle="@($"{KickoffUtc.ToLocalTime():dd/MM HH:mm} · BRT")">
+    <Actions>
         <PredictionLockCountdownChip KickoffUtc="@KickoffUtc" />
-    </div>
-</div>
+    </Actions>
+</PageHeader>
 
 @code {
     [Parameter] public string? Phase { get; set; }
@@ -18,22 +14,3 @@
     [Parameter] public string AwayCode { get; set; } = "";
     [Parameter] public DateTime KickoffUtc { get; set; }
 }
-
-<style>
-    .match-header {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 0 40px 32px;
-    }
-
-    .match-title-group {
-        flex: 1;
-    }
-
-    .match-chip-group {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-</style>

@@ -1,7 +1,7 @@
 <div class="calendar-detail-actions">
     <button class="bb-topbar-btn" @onclick="() => OnClear.InvokeAsync()">Limpar</button>
     <button class="bb-topbar-btn primary" @onclick="() => OnSave.InvokeAsync()">
-        Salvar palpite em @SelectedPoolCount bolão@(SelectedPoolCount == 1 ? "" : "(ões)")
+        @PtCopy.SavePalpiteEmBoloes(SelectedPoolCount)
     </button>
 </div>
 

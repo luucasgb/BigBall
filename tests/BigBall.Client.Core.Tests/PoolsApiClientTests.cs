@@ -97,13 +97,14 @@ public class PoolsApiClientTests
             Assert.Equal("/api/pools/join", req.RequestUri?.PathAndQuery);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent(new JoinPoolResponse(poolId))
+                Content = JsonContent(new JoinPoolResponse(poolId, "Bolão X"))
             };
         }));
 
         var result = await sut.JoinPoolByInviteAsync(new JoinPoolRequest("ab12cd34"));
 
         Assert.Equal(poolId, result.PoolId);
+        Assert.Equal("Bolão X", result.PoolName);
     }
 
     [Fact]

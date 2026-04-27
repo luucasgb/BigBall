@@ -188,7 +188,7 @@ public static class PoolsEndpoints
                 JoinedUtc = now
             });
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new JoinPoolResponse(pool.Id));
+            return Results.Ok(new JoinPoolResponse(pool.Id, pool.Name));
         })
         .WithName("JoinPoolByInvite");
 

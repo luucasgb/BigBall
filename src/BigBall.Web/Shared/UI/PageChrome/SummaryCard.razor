@@ -3,7 +3,7 @@
         <div class="bb-dcard-title">Resumo</div>
     </div>
     <div class="summary-card-body">
-        <div class="summary-card-content">@PoolCount bolão(ões) ativo(s)</div>
+        <div class="summary-card-content">@PtCopy.ActivePoolsLine(PoolCount)</div>
         @if (!string.IsNullOrEmpty(ErrorMessage))
         {
             <div class="summary-card-error">@ErrorMessage</div>

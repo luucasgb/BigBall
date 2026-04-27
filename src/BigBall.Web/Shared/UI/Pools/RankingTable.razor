@@ -44,7 +44,7 @@
                                         <span class="bb-chip member-tie-badge">empate</span>
                                     }
                                 </div>
-                                <div class="member-matches">12 jogos palpitados</div>
+                                <div class="member-matches">@PredictedGamesLabel(row.PredictedGamesCount)</div>
                             </div>
                         </div>
                     </td>
@@ -69,6 +69,13 @@
     [Parameter] public int MyPosition { get; set; }
     [Parameter] public int MyPoints { get; set; }
     [Parameter] public bool HasTieWithMe { get; set; }
+
+    private static string PredictedGamesLabel(int n) => n switch
+    {
+        0 => "Nenhum jogo palpitado",
+        1 => "1 jogo palpitado",
+        _ => $"{n} jogos palpitados"
+    };
 }
 
 <style>

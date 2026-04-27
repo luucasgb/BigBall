@@ -10,7 +10,7 @@
 <div class="bb-content">
             <PageHeader Title="Início"
                         Eyebrow="BigBall · Copa do Mundo 2026"
-                        Subtitle="@(VM.FeaturedNextMatch is { } fn ? $"{VM.Pools.Count} bolão(ões) ativo(s) · palpites até o início ({TimeFormatting.FormatKickoff(fn.KickoffUtc)})" : null)" />
+                        Subtitle="@(VM.FeaturedNextMatch is { } fn ? $"{PtCopy.ActivePoolsLine(VM.Pools.Count)} · palpites até o início ({TimeFormatting.FormatKickoff(fn.KickoffUtc)})" : null)" />
 
             <div class="home-cols">
                 <div class="home-col-main">

@@ -49,7 +49,7 @@
             else
             {
                 <div class="bb-join-pool-success">
-                    <p class="bb-succ-msg">Você passou a participar deste bolão privado.</p>
+                    <p class="bb-succ-msg">Você passou a participar do bolão <strong>@_joinedPoolName</strong>.</p>
                     <button type="button" class="bb-btn bb-btn-primary bb-succ-cta" @onclick="GoToPool">Ir para o bolão</button>
                 </div>
             }
@@ -64,6 +64,7 @@
     private bool _busy;
     private Step _step = Step.Form;
     private Guid _joinedPoolId;
+    private string _joinedPoolName = "";
     private bool _subscribed;
 
     private enum Step { Form, Success }
@@ -102,6 +103,7 @@
         _error = null;
         _busy = false;
         _step = Step.Form;
+        _joinedPoolName = "";
     }
 
     private void Close() => Dialog.Close();
@@ -130,6 +132,7 @@
         {
             var res = await PoolsApi.JoinPoolByInviteAsync(new JoinPoolRequest(_inviteCode.Trim()));
             _joinedPoolId = res.PoolId;
+            _joinedPoolName = res.PoolName;
             _step = Step.Success;
         }
         catch (InvalidOperationException ex)

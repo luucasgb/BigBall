@@ -10,12 +10,14 @@ public partial class LoginViewModel : ViewModelBase
 {
     private readonly IAuthApi _auth;
     private readonly ITokenStore _tokens;
+    private readonly IUserProfileStore _profileStore;
     private readonly IAppNavigator _navigator;
 
-    public LoginViewModel(IAuthApi auth, ITokenStore tokens, IAppNavigator navigator)
+    public LoginViewModel(IAuthApi auth, ITokenStore tokens, IUserProfileStore profileStore, IAppNavigator navigator)
     {
         _auth = auth;
         _tokens = tokens;
+        _profileStore = profileStore;
         _navigator = navigator;
     }
 
@@ -41,7 +43,8 @@ public partial class LoginViewModel : ViewModelBase
         }
         var response = await _auth.LoginAsync(new LoginRequest(Email.Trim(), Password), token);
         await _tokens.SetTokenAsync(response.Token, token);
-        Profile = await _auth.GetMyProfileAsync(token);
+        await _profileStore.SetSnapshotAsync(response.Profile, token);
+        Profile = response.Profile;
         _navigator.NavigateTo("/", replace: true);
     }, ct);
 

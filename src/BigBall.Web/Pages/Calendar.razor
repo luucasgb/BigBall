@@ -1,13 +1,11 @@
 @page "/calendar"
+@layout DesktopAppLayout
 @using System.Globalization
 @using BigBall.Shared.Dtos
 @using BigBall.Shared.WorldCup
 @inject IMatchesApi MatchesApi
 
-<div class="bb-desk theme-dark">
-    <Sidebar Active="calendar" />
-    <main class="bb-main">
-        <DesktopTopbar Placeholder="Buscar partida ou seleção…" />
+<DesktopTopbar Placeholder="Buscar partida ou seleção…" />
 
         <PageHeader Title="Calendário"
                     Eyebrow="@_headerEyebrow">
@@ -105,8 +103,6 @@
 
         </div>
         }
-    </main>
-</div>
 
 @code {
     private static readonly CultureInfo PtBr = new("pt-BR");

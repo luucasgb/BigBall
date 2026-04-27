@@ -1,5 +1,7 @@
 @page "/auth/callback"
 @inject BigBall.Client.Core.Abstractions.ITokenStore TokenStore
+@inject BigBall.Client.Core.Abstractions.IUserProfileStore UserProfileStore
+@inject BigBall.Client.Core.Abstractions.IAuthApi AuthApi
 @inject NavigationManager Nav
 
 <div class="bb-auth-page theme-dark">
@@ -31,6 +33,16 @@
         }
 
         await TokenStore.SetTokenAsync(token);
+        try
+        {
+            var profile = await AuthApi.GetMyProfileAsync();
+            await UserProfileStore.SetSnapshotAsync(profile);
+        }
+        catch
+        {
+            // Sidebar / profile page can recover via /me when snapshot is missing.
+        }
+
         Nav.NavigateTo("/", replace: true);
     }
 

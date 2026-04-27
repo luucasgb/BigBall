@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="bb-desk theme-dark">
+    <Sidebar Active="@_active" />
+    <main class="bb-main">
+        @Body
+    </main>
+</div>
+
+@code {
+    private string _active = "dashboard";
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        _active = DeskSidebarActive.FromPath(Nav.ToBaseRelativePath(Nav.Uri));
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _active = DeskSidebarActive.FromPath(Nav.ToBaseRelativePath(e.Location));
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+}

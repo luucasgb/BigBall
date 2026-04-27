@@ -14,8 +14,9 @@ public class RegisterViewModelTests
             new ProfileDto(Guid.NewGuid(), "a@b.com", "A B", null, DateTime.UtcNow));
         var auth = new FakeAuthApi(registerReturns: new RegisterResponse(session, RequiresEmailConfirmation: false));
         var tokens = new FakeTokenStore();
+        var profiles = new FakeUserProfileStore();
         var nav = new FakeNavigator();
-        var vm = new RegisterViewModel(auth, tokens, nav)
+        var vm = new RegisterViewModel(auth, tokens, profiles, nav)
         {
             Email = "a@b.com",
             Password = "secret1",
@@ -29,6 +30,9 @@ public class RegisterViewModelTests
         Assert.True(nav.LastReplace);
         Assert.Null(vm.ErrorMessage);
         Assert.Null(vm.SuccessMessage);
+        Assert.NotNull(profiles.LastSnapshot);
+        Assert.Equal("a@b.com", profiles.LastSnapshot!.Email);
+        Assert.Equal(0, auth.GetMyProfileCallCount);
     }
 
     [Fact]
@@ -39,8 +43,9 @@ public class RegisterViewModelTests
             RequiresEmailConfirmation: true,
             PendingEmail: "a@b.com"));
         var tokens = new FakeTokenStore();
+        var profiles = new FakeUserProfileStore();
         var nav = new FakeNavigator();
-        var vm = new RegisterViewModel(auth, tokens, nav)
+        var vm = new RegisterViewModel(auth, tokens, profiles, nav)
         {
             Email = "a@b.com",
             Password = "secret1",
@@ -63,8 +68,9 @@ public class RegisterViewModelTests
     {
         var auth = new FakeAuthApi(registerReturns: null);
         var tokens = new FakeTokenStore();
+        var profiles = new FakeUserProfileStore();
         var nav = new FakeNavigator();
-        var vm = new RegisterViewModel(auth, tokens, nav)
+        var vm = new RegisterViewModel(auth, tokens, profiles, nav)
         {
             Email = "a@b.com",
             Password = "a",
@@ -76,6 +82,30 @@ public class RegisterViewModelTests
         Assert.Equal(0, auth.RegisterCallCount);
         Assert.Null(tokens.StoredToken);
         Assert.False(string.IsNullOrWhiteSpace(vm.ErrorMessage));
+    }
+
+    private sealed class FakeUserProfileStore : IUserProfileStore
+    {
+        public ProfileDto? LastSnapshot { get; private set; }
+        public event Action? SnapshotChanged;
+
+        public ProfileDto? Snapshot => LastSnapshot;
+
+        public ValueTask SetSnapshotAsync(ProfileDto profile, CancellationToken ct = default)
+        {
+            LastSnapshot = profile;
+            SnapshotChanged?.Invoke();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask ClearAsync(CancellationToken ct = default)
+        {
+            LastSnapshot = null;
+            SnapshotChanged?.Invoke();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask EnsureHydratedFromStorageAsync(CancellationToken ct = default) => ValueTask.CompletedTask;
     }
 
     private sealed class FakeAuthApi : IAuthApi
@@ -90,6 +120,7 @@ public class RegisterViewModelTests
         }
 
         public int RegisterCallCount { get; private set; }
+        public int GetMyProfileCallCount { get; private set; }
 
         public Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken ct = default) =>
             Task.FromResult(_login);
@@ -104,8 +135,11 @@ public class RegisterViewModelTests
         public Task<OAuthRedirectUrlResponse> GetGoogleUrlAsync(string redirectTo, CancellationToken ct = default)
             => Task.FromResult(new OAuthRedirectUrlResponse("https://example.com/auth"));
 
-        public Task<ProfileDto> GetMyProfileAsync(CancellationToken ct = default) =>
-            Task.FromResult(new ProfileDto(Guid.NewGuid(), "x@y.com", "X", null, DateTime.UtcNow));
+        public Task<ProfileDto> GetMyProfileAsync(CancellationToken ct = default)
+        {
+            GetMyProfileCallCount++;
+            return Task.FromResult(new ProfileDto(Guid.NewGuid(), "x@y.com", "X", null, DateTime.UtcNow));
+        }
     }
 
     private sealed class FakeTokenStore : ITokenStore

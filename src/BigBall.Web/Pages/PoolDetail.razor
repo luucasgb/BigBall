@@ -1,68 +1,63 @@
 @page "/pools/{PoolId:guid}"
+@layout DesktopAppLayout
 @inject PoolDetailViewModel VM
 @inject NavigationManager Nav
 @implements IDisposable
 
-<div class="bb-desk theme-dark">
-    <Sidebar Active="dashboard" />
-    <main class="bb-main">
-        <DesktopTopbar Placeholder="Buscar membros, partidas, palpites…" />
+<DesktopTopbar Placeholder="Buscar membros, partidas, palpites…" />
 
-        @if (VM.Pool is { } pool)
-        {
-            <PoolHeader Name="@pool.Name"
-                        Visibility="@pool.Visibility"
-                        PrizeDescription="@pool.PrizeDescription"
-                        MemberNames="@VM.Ranking.Select(r => r.Name).ToList()"
-                        OnBack="@HandleBack" />
+@if (VM.Pool is { } pool)
+{
+    <PoolHeader Name="@pool.Name"
+                Visibility="@pool.Visibility"
+                PrizeDescription="@pool.PrizeDescription"
+                MemberNames="@VM.Ranking.Select(r => r.Name).ToList()"
+                OnBack="@HandleBack" />
 
-            <PoolTabNav SelectedTab="@VM.SelectedTab"
-                        OnTabChanged="tab => VM.SelectedTab = tab" />
+    <PoolTabNav SelectedTab="@VM.SelectedTab"
+                OnTabChanged="tab => VM.SelectedTab = tab" />
 
-            <div class="bb-content">
-                <PoolDetailLayout>
-                    <MainContent>
-                        @if (VM.SelectedTab == PoolTab.Ranking)
-                        {
-                            <RankingTable Rows="@VM.Ranking.ToList()"
-                                          MyPosition="@pool.MyPosition"
-                                          MyPoints="@pool.MyPoints"
-                                          HasTieWithMe="@VM.HasTieWithMe" />
-                        }
-                        else
-                        {
-                            <div class="bb-dcard empty-state">
-                                <span class="bb-empty">Em breve.</span>
-                            </div>
-                        }
-                    </MainContent>
-                    <SidebarContent>
-                        <div class="pool-sidebar">
-                            <TieAlert Show="@VM.HasTieWithMe" />
+    <div class="bb-content">
+        <PoolDetailLayout>
+            <MainContent>
+                @if (VM.SelectedTab == PoolTab.Ranking)
+                {
+                    <RankingTable Rows="@VM.Ranking.ToList()"
+                                  MyPosition="@pool.MyPosition"
+                                  MyPoints="@pool.MyPoints"
+                                  HasTieWithMe="@VM.HasTieWithMe" />
+                }
+                else
+                {
+                    <div class="bb-dcard empty-state">
+                        <span class="bb-empty">Em breve.</span>
+                    </div>
+                }
+            </MainContent>
+            <SidebarContent>
+                <div class="pool-sidebar">
+                    <TieAlert Show="@VM.HasTieWithMe" />
 
-                            <MyPositionCard Position="@pool.MyPosition"
-                                            Points="@pool.MyPoints" />
+                    <MyPositionCard Position="@pool.MyPosition"
+                                    Points="@pool.MyPoints" />
 
-                            <LeaderCard LeaderName="@pool.Leader.Name"
-                                        LeaderPoints="@pool.Leader.Points" />
-                        </div>
-                    </SidebarContent>
-                </PoolDetailLayout>
-            </div>
-        }
-        else if (!string.IsNullOrEmpty(VM.ErrorMessage))
-        {
-            <div class="error-container">
-                <div class="bb-error">@VM.ErrorMessage</div>
-            </div>
-        }
-        else
-        {
-            <div class="loading-container">Carregando…</div>
-        }
-
-    </main>
-</div>
+                    <LeaderCard LeaderName="@pool.Leader.Name"
+                                LeaderPoints="@pool.Leader.Points" />
+                </div>
+            </SidebarContent>
+        </PoolDetailLayout>
+    </div>
+}
+else if (!string.IsNullOrEmpty(VM.ErrorMessage))
+{
+    <div class="error-container">
+        <div class="bb-error">@VM.ErrorMessage</div>
+    </div>
+}
+else
+{
+    <div class="loading-container">Carregando…</div>
+}
 
 @code {
     [Parameter] public Guid PoolId { get; set; }

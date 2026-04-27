@@ -1,72 +1,66 @@
 @page "/pools/{PoolId:guid}/predict/{MatchId:guid}"
 @page "/predict"
+@layout DesktopAppLayout
 @using BigBall.Client.Core.Abstractions
 @inject PredictViewModel VM
 @inject IPoolsApi PoolsApi
 @inject NavigationManager Nav
 @implements IDisposable
 
-<div class="bb-desk theme-dark">
-    <Sidebar Active="predict" />
-    <main class="bb-main">
-        <DesktopTopbar />
-        <div class="bb-content">
-
-            @if (VM.Match is { } m)
-            {
-                <MatchHeader Phase="@(m.GroupLabel ?? m.Phase)"
-                             HomeCode="@m.HomeCode"
-                             AwayCode="@m.AwayCode"
-                             KickoffUtc="@m.KickoffUtc" />
-            }
-            else
-            {
-                <div class="bb-page-h">
-                    <div class="bb-page-title">Palpite</div>
-                </div>
-            }
-            @{
-                var headErr = _resolveError ?? VM.ErrorMessage;
-            }
-            @if (headErr is { } he)
-            {
-                <div style="padding:0 40px 24px;max-width:640px;">
-                    <ErrorAlert Message="@he" />
-                </div>
-            }
-
-            @if (VM.Match is { } match)
-            {
-                <div class="prediction-page-grid">
-                    <MatchCard HomeCode="@match.HomeCode"
-                               AwayCode="@match.AwayCode"
-                               HomePrediction="@VM.HomePrediction"
-                               AwayPrediction="@VM.AwayPrediction"
-                               IsLocked="@VM.IsLocked"
-                               IsBusy="@VM.IsBusy"
-                               HomeReferenceScore="@match.ReferenceHome"
-                               AwayReferenceScore="@match.ReferenceAway"
-                               Preview="@VM.Preview"
-                               HomePredictionChanged="v => VM.HomePrediction = v"
-                               AwayPredictionChanged="v => VM.AwayPrediction = v" />
-
-                    <PredictionLayout>
-                        <ScoringRulesCard />
-                        <ErrorAlert Message="@VM.ErrorMessage" />
-                        <SavePredictionButton IsSaved="@VM.IsSaved"
-                                              IsBusy="@VM.IsBusy"
-                                              CanSave="@(VM.SaveCommand.CanExecute(null))"
-                                              OnSave="() => VM.SaveCommand.ExecuteAsync(null)" />
-                    </PredictionLayout>
-                </div>
-            }
-            else if (VM.IsBusy || _resolving)
-            {
-                <div style="padding:40px;color:var(--fg-3);">Carregando…</div>
-            }
-
+<DesktopTopbar />
+<div class="bb-content">
+    @if (VM.Match is { } m)
+    {
+        <MatchHeader Phase="@(m.GroupLabel ?? m.Phase)"
+                     HomeCode="@m.HomeCode"
+                     AwayCode="@m.AwayCode"
+                     KickoffUtc="@m.KickoffUtc" />
+    }
+    else
+    {
+        <div class="bb-page-h">
+            <div class="bb-page-title">Palpite</div>
         </div>
-    </main>
+    }
+    @{
+        var headErr = _resolveError ?? VM.ErrorMessage;
+    }
+    @if (headErr is { } he)
+    {
+        <div style="padding:0 40px 24px;max-width:640px;">
+            <ErrorAlert Message="@he" />
+        </div>
+    }
+
+    @if (VM.Match is { } match)
+    {
+        <div class="prediction-page-grid">
+            <MatchCard HomeCode="@match.HomeCode"
+                       AwayCode="@match.AwayCode"
+                       HomePrediction="@VM.HomePrediction"
+                       AwayPrediction="@VM.AwayPrediction"
+                       IsLocked="@VM.IsLocked"
+                       IsBusy="@VM.IsBusy"
+                       HomeReferenceScore="@match.ReferenceHome"
+                       AwayReferenceScore="@match.ReferenceAway"
+                       Preview="@VM.Preview"
+                       HomePredictionChanged="v => VM.HomePrediction = v"
+                       AwayPredictionChanged="v => VM.AwayPrediction = v" />
+
+            <PredictionLayout>
+                <ScoringRulesCard />
+                <ErrorAlert Message="@VM.ErrorMessage" />
+                <SavePredictionButton IsSaved="@VM.IsSaved"
+                                      IsBusy="@VM.IsBusy"
+                                      CanSave="@(VM.SaveCommand.CanExecute(null))"
+                                      OnSave="() => VM.SaveCommand.ExecuteAsync(null)" />
+            </PredictionLayout>
+        </div>
+    }
+    else if (VM.IsBusy || _resolving)
+    {
+        <div style="padding:40px;color:var(--fg-3);">Carregando…</div>
+    }
 </div>
 
 @code {

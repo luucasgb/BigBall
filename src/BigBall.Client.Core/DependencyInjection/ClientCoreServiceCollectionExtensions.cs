@@ -9,8 +9,8 @@ public static class ClientCoreServiceCollectionExtensions
 {
     /// <summary>
     /// Registers API clients (Auth/Pools/Matches/Predictions) + the 4 ViewModels.
-    /// Consumers must additionally register <see cref="ITokenStore"/> and
-    /// <see cref="IAppNavigator"/> implementations for their platform.
+    /// Consumers must additionally register <see cref="ITokenStore"/>,
+    /// <see cref="IUserProfileStore"/>, and <see cref="IAppNavigator"/> implementations for their platform.
     /// </summary>
     public static IServiceCollection AddBigBallClientCore(
         this IServiceCollection services,

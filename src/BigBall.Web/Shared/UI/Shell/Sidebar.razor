@@ -1,7 +1,7 @@
 @* Fixed left-nav sidebar shared across all desktop screens. *@
 @using BigBall.Client.Core.Abstractions
-@inject IAuthApi AuthApi
-@inject ITokenStore TokenStore
+@inject IUserProfileStore UserProfileStore
+@implements IDisposable
 
 <SidebarFrame>
     <div class="bb-logo">
@@ -46,27 +46,47 @@
     private string ResolvedUserEmail { get; set; } = string.Empty;
     private string? ResolvedAvatarUrl { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        ResolvedUserName = UserName;
-        ResolvedUserEmail = UserEmail;
+        UserProfileStore.SnapshotChanged += OnSnapshotChanged;
+        ApplyFromStore();
+    }
 
-        var token = await TokenStore.GetTokenAsync();
-        if (string.IsNullOrWhiteSpace(token))
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
         {
             return;
         }
 
-        try
+        await UserProfileStore.EnsureHydratedFromStorageAsync();
+        ApplyFromStore();
+        StateHasChanged();
+    }
+
+    private void OnSnapshotChanged()
+    {
+        ApplyFromStore();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ApplyFromStore()
+    {
+        if (UserProfileStore.Snapshot is { } profile)
         {
-            var profile = await AuthApi.GetMyProfileAsync();
             ResolvedUserName = string.IsNullOrWhiteSpace(profile.DisplayName) ? UserName : profile.DisplayName;
             ResolvedUserEmail = string.IsNullOrWhiteSpace(profile.Email) ? UserEmail : profile.Email;
             ResolvedAvatarUrl = string.IsNullOrWhiteSpace(profile.AvatarUrl) ? null : profile.AvatarUrl;
+            return;
         }
-        catch
-        {
-            // Keep provided fallback values when profile fetch fails.
-        }
+
+        ResolvedUserName = UserName;
+        ResolvedUserEmail = UserEmail;
+        ResolvedAvatarUrl = null;
+    }
+
+    public void Dispose()
+    {
+        UserProfileStore.SnapshotChanged -= OnSnapshotChanged;
     }
 }

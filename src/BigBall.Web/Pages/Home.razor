@@ -1,16 +1,13 @@
 @page "/"
+@layout DesktopAppLayout
 @using BigBall.Web.Shared.UI
 @inject HomeViewModel VM
 @inject BigBall.Client.Core.Abstractions.ITokenStore TokenStore
 @inject NavigationManager Nav
 @implements IDisposable
 
-<div class="bb-desk theme-dark">
-    <Sidebar Active="dashboard" />
-    <main class="bb-main">
-        <DesktopTopbar />
-        <div class="bb-content">
-
+<DesktopTopbar />
+<div class="bb-content">
             <PageHeader Title="Início"
                         Eyebrow="BigBall · Copa do Mundo 2026"
                         Subtitle="@(VM.FeaturedNextMatch is { } fn ? $"{VM.Pools.Count} bolão(ões) ativo(s) · palpites até o início ({TimeFormatting.FormatKickoff(fn.KickoffUtc)})" : null)" />
@@ -47,9 +44,6 @@
                     </div>
                 </div>
             </div>
-
-        </div>
-    </main>
 </div>
 
 @code {

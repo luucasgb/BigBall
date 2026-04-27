@@ -87,3 +87,8 @@ wwwroot/_framework/
 
 # Googleusercontent local files
 *googleusercontent*
+
+# App settings
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json

@@ -18,6 +18,30 @@ cd BigBall
 dotnet build
 ```
 
+### Configure API secrets (local development)
+
+`BigBall.Api` loads **.NET User Secrets** for local development and **environment variables** in production. `BigBall.Web` has no app secrets.
+
+**One-time repo hygiene**
+
+- In the repo root `.gitignore`, ignore `appsettings.Development.json` and `appsettings.*.json` recursively, but keep `appsettings.json` tracked.
+- Remove the API dev file from Git tracking (keep your local copy): `git rm --cached src/BigBall.Api/appsettings.Development.json`, then commit. If a real secret was ever committed, rotate it and consider purging history (e.g. `git filter-repo --path src/BigBall.Api/appsettings.Development.json --invert-paths`).
+
+**User Secrets** (run from `src/BigBall.Api/`):
+
+```bash
+dotnet user-secrets init
+dotnet user-secrets set "ConnectionStrings:Supabase" "<your-connection-string>"
+dotnet user-secrets set "Supabase:ProjectUrl" "<your-project-url>"
+dotnet user-secrets set "Supabase:PublishableKey" "<your-publishable-key>"
+```
+
+Secrets are stored outside the repo (Windows: `%APPDATA%\Microsoft\UserSecrets\<guid>\secrets.json`; Linux/macOS: `~/.microsoft/usersecrets/<guid>/secrets.json`).
+
+**Production** — inject the same values as environment variables using double underscores: `ConnectionStrings__Supabase`, `Supabase__ProjectUrl`, `Supabase__PublishableKey` (Docker Compose, hosting panel, CI/CD secrets such as GitHub Actions `${{ secrets.NAME }}`, etc.).
+
+**Precedence** (highest to lowest): environment variables → User Secrets → `appsettings.Development.json` → `appsettings.json`. The committed `appsettings.Development.json` should use placeholders like `CONFIGURE_VIA_USER_SECRETS` for sensitive keys. Non-secret values (for example `JwtAudience: authenticated`, Serilog/Seq URLs) are safe to commit there.
+
 ### Run Locally
 
 #### 1. Start the API (port 5080)

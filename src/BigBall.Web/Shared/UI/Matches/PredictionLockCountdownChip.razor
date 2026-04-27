@@ -9,7 +9,7 @@ else
 {
     <span class="pred-lock-chip bb-chip">
         <Icon Path="@IconPaths.Lock" Size="12" />
-        <span class="pred-lock-chip-text">Fecha em @TimeFormatting.FormatPredictionDeadlineCountdown(_remaining, _remaining <= TimeSpan.FromMinutes(5))</span>
+        <span class="pred-lock-chip-text">Fecha em @TimeFormatting.FormatPredictionDeadlineCountdown(_remaining)</span>
     </span>
 }
 
@@ -55,9 +55,11 @@ else
                     return;
                 }
 
-                var delay = _remaining > TimeSpan.FromMinutes(5)
-                    ? TimeSpan.FromMinutes(1)
-                    : TimeSpan.FromSeconds(1);
+                var delay = _remaining > TimeSpan.FromHours(12)
+                    ? TimeSpan.FromHours(1)
+                    : _remaining > TimeSpan.FromMinutes(5)
+                        ? TimeSpan.FromMinutes(1)
+                        : TimeSpan.FromSeconds(1);
                 if (delay > _remaining)
                 {
                     delay = _remaining;

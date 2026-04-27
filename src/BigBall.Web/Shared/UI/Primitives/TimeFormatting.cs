@@ -10,35 +10,48 @@ public static class TimeFormatting
             : $"{t.Minutes:D2}:{t.Seconds:D2}";
     }
 
-    /// <summary>Human-readable time until kickoff (prediction deadline). When <paramref name="includeSeconds"/> is true (last 5 minutes), includes seconds.</summary>
-    public static string FormatPredictionDeadlineCountdown(TimeSpan remaining, bool includeSeconds)
+    /// <summary>
+    /// Human-readable time until kickoff. Tiers: &gt;7d → days only; &gt;12h → days+hours;
+    /// &gt;5m → hours+minutes; else → minutes+seconds. Exactly 7d uses the 12h tier (7d 0h).
+    /// </summary>
+    public static string FormatPredictionDeadlineCountdown(TimeSpan remaining)
     {
         if (remaining <= TimeSpan.Zero)
         {
             return "0m";
         }
 
-        if (includeSeconds)
+        if (remaining > TimeSpan.FromDays(7))
         {
-            var totalSec = (int)remaining.TotalSeconds;
-            var m = totalSec / 60;
-            var s = totalSec % 60;
-            return $"{m}m {s:D2}s";
+            return FormatDaysOnly(remaining);
         }
 
-        var d = (int)remaining.TotalDays;
-        if (d > 0)
+        if (remaining > TimeSpan.FromHours(12))
         {
-            return $"{d}d {remaining.Hours}h {remaining.Minutes}m";
+            return FormatDaysAndHours(remaining);
         }
 
-        var totalH = (int)remaining.TotalHours;
-        if (totalH > 0)
+        if (remaining > TimeSpan.FromMinutes(5))
         {
-            return $"{totalH}h {remaining.Minutes}m";
+            return FormatHoursAndMinutes(remaining);
         }
 
-        return $"{remaining.Minutes}m";
+        return FormatMinutesAndSeconds(remaining);
+    }
+
+    private static string FormatDaysOnly(TimeSpan remaining) =>
+        $"{(int)Math.Floor(remaining.TotalDays)}d";
+
+    private static string FormatDaysAndHours(TimeSpan remaining) =>
+        $"{remaining.Days}d {remaining.Hours}h";
+
+    private static string FormatHoursAndMinutes(TimeSpan remaining) =>
+        $"{(int)remaining.TotalHours}h {remaining.Minutes}m";
+
+    private static string FormatMinutesAndSeconds(TimeSpan remaining)
+    {
+        var t = (int)remaining.TotalSeconds;
+        return $"{t / 60}m {t % 60:D2}s";
     }
 
     /// <summary>

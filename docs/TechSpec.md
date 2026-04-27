@@ -129,7 +129,7 @@ A escolha do fornecedor **não bloqueia** o modelo canónico `Match`, desde que 
 | Alvo canónico | Uso |
 | ------------- | --- |
 | ID estável da partida no fornecedor | Jobs, deduplicação, correlação manual ↔ feed |
-| Início oficial da partida | Lock de palpites (PRD 4.7) |
+| Início oficial da partida | Fechamento de palpites (no apito, PRD 4.7) |
 | Estado / fase da partida | Elegibilidade, UI, decisão de recálculo |
 | Gols mandante **ao fim do TR** | Pontuação faixas 1–5 |
 | Gols visitante **ao fim do TR** | Idem |

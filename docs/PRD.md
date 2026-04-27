@@ -130,13 +130,13 @@ Cada item inclui **descrição** e **critérios de aceite** resumidos.
 
 ### 4.7 Palpites
 
-**Descrição:** Para cada jogo em que o membro é **elegível a palpitar** (ver critérios abaixo), informa-se **palpite de placar** (gols mandante x gols visitante). O **fechamento das palpites (lock)** ocorre **5 (cinco) minutos antes do horário de início oficial da partida** (horário de apito inicial divulgado no calendário). Em partidas da **fase eliminatória (mata-mata)**, o membro informa também, no mesmo palpite, **qual seleção venceria uma eventual disputa de pênaltis** (campo obrigatório na UI para jogos de mata-mata; valor usado apenas se a partida de fato for à disputa de pênaltis — ver 4.8).
+**Descrição:** Para cada jogo em que o membro é **elegível a palpitar** (ver critérios abaixo), informa-se **palpite de placar** (gols mandante x gols visitante). O **fechamento das palpites (lock)** ocorre no **horário de início oficial da partida** (apito inicial divulgado no calendário). Em partidas da **fase eliminatória (mata-mata)**, o membro informa também, no mesmo palpite, **qual seleção venceria uma eventual disputa de pênaltis** (campo obrigatório na UI para jogos de mata-mata; valor usado apenas se a partida de fato for à disputa de pênaltis — ver 4.8).
 
 **Critérios de aceite:**
 
 - **Elegibilidade por partida:** só são aceitos palpites para jogos **ainda não iniciados** no momento da submissão. Se um usuário **entrar no bolão após o início** de uma determinada partida, ele **não poderá registrar palpite** para essa partida **naquele bolão** (a partida aparece como indisponível ou “não elegível” para ele).
 - **Escopo do bolão:** todas as partidas da Copa no escopo do produto seguem a mesma regra de elegibilidade acima; membros que já estavam no bolão antes do início da partida podem palpitar até o lock, se ainda dentro da janela.
-- Palpite pode ser **alterado** até o lock (**início da partida menos 5 minutos**).
+- Palpite pode ser **alterado** até o lock (**início oficial da partida**).
 - Após o lock, o palpite é **somente leitura**.
 - **Mata-mata:** o formulário de palpite inclui **vencedor hipotético nos pênaltis** (uma das duas seleções da partida). Se o usuário não preencher antes do lock, o sistema deve **bloquear o envio** do palpite até o campo estar válido.
 
@@ -234,7 +234,7 @@ Esta seção consolida o **modelo mental** do produto (complementa os requisitos
 
 ### 6.1 O que é um bolão
 
-Um **bolão** é um grupo de pessoas que, para cada partida em que são **elegíveis**, registra um **palpite de placar** (e, no mata-mata, **vencedor hipotético nos pênaltis**) até o **lock** (**5 minutos antes do início** da partida — ver 4.7). Quando a partida encerra e há resultado válido (**provedor** ou **manual por administrador de plataforma** — 4.11), o sistema atribui **pontos** conforme a seção 4.8. O **ranking** do bolão é a **soma** dos pontos por partida (**0** quando não há palpite válido — 4.8). O **vencedor** (MVP) é o participante com **maior pontuação total**, aplicando o **desempate** da seção **4.8**.
+Um **bolão** é um grupo de pessoas que, para cada partida em que são **elegíveis**, registra um **palpite de placar** (e, no mata-mata, **vencedor hipotético nos pênaltis**) até o **lock** (**início oficial** da partida — ver 4.7). Quando a partida encerra e há resultado válido (**provedor** ou **manual por administrador de plataforma** — 4.11), o sistema atribui **pontos** conforme a seção 4.8. O **ranking** do bolão é a **soma** dos pontos por partida (**0** quando não há palpite válido — 4.8). O **vencedor** (MVP) é o participante com **maior pontuação total**, aplicando o **desempate** da seção **4.8**.
 
 ### 6.2 Cobertura de fases (MVP)
 
@@ -346,7 +346,7 @@ flowchart LR
 
 - **Atribuição de faixa de pontos:** escolher a **categoria mais específica** verdadeira; na prática, com as faixas deste PRD, **a maior pontuação válida** (4.8).
 - **Desempate no ranking:** contagens recursivas por faixa — **20 → 16 → 15 → 10 → 5** pontos por partida; em seguida **número de bônus +3**; se ainda empatar, **sorteio em [1, n]** após numerar os **n** empatados, conduzido por **participante neutro** fora do grupo empatado, com **auditoria** (4.8 e 4.10).
-- **Lock de palpites:** **5 minutos antes** do início oficial da partida (4.7).
+- **Lock de palpites:** no **início oficial** da partida (4.7).
 - **Elegibilidade:** só jogos **não iniciados**; quem **entra no bolão após o início** de uma partida **não palpita** nessa partida naquele bolão (4.7).
 - **Resultado sem feed / conflitos entre bolões:** apenas **administrador de plataforma** insere resultado **manual global** (4.11); **provedor de dados tem precedência** quando atualizar.
 - **Desempate final no ranking:** numeração **1..n** por **ordem alfabética do nome de exibição** + sorteio por **neutro/testemunha** (ordem de elegibilidade em 4.8) + **auditoria** (4.8).
@@ -364,7 +364,7 @@ flowchart LR
 | Termo                           | Significado                                                                                                                                                                                                                                                        |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Bolão                           | Grupo de pessoas que palpitam jogos e competem por pontuação acumulada.                                                                                                                                                                                            |
-| Lock                            | Instant em que palpites não podem mais ser criados ou alterados: **5 minutos antes do início oficial** da partida (4.7).                                                                                                                                           |
+| Lock                            | Instant em que palpites não podem mais ser criados ou alterados: **início oficial** da partida (4.7).                                                                                                                                           |
 | 1X2                             | Três estados de resultado: vitória mandante / empate / vitória visitante (conforme o placar de referência usado na pontuação).                                                                                                                                     |
 | Tempo regulamentar (TR)         | 90 minutos + acréscimos; usado como referência para as faixas 1–5 da seção 4.8.                                                                                                                                                                                    |
 | Bônus de pênaltis               | +3 pontos somados à partida se houver disputa de pênaltis e o vencedor nela for o palpitado (mata-mata).                                                                                                                                                           |
@@ -377,7 +377,7 @@ flowchart LR
 
 ## 13. Próximos passos
 
-1. Implementar **lock T−5min**, **elegibilidade pós-entrada no bolão**, **cadeia de desempate** do ranking e **sorteio 1..n com participante neutro** conforme 4.7–4.8; área administrativa de **administrador de plataforma** para resultado manual global (4.11) e **reconciliação** com o feed do provedor.
+1. Implementar **lock no apito (início oficial)**, **elegibilidade pós-entrada no bolão**, **cadeia de desempate** do ranking e **sorteio 1..n com participante neutro** conforme 4.7–4.8; área administrativa de **administrador de plataforma** para resultado manual global (4.11) e **reconciliação** com o feed do provedor.
 2. Manter o [**TechSpec.md**](./TechSpec.md) como fonte viva de **schema**, **jobs** de atualização de placar, integração com o provedor (adapter, variáveis de ambiente) e plano de avaliação para **produção** (manter vs. [FlashScore na RapidAPI](https://rapidapi.com/rapidapi-org1-rapidapi-org-default/api/flashscore4)).
 3. Protótipo de UX: fluxos criar bolão, entrar com código, palpitar, ranking.
 4. Implementação do MVP conforme priorização de engenharia/produto.

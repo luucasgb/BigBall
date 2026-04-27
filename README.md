@@ -85,6 +85,8 @@ Use any email + password (stub auth). Example:
 
 This is a **stub implementation** with in-memory data. Full Supabase integration and sports data provider are out of scope for this iteration.
 
+Predictions close at **official kickoff** (see PRD 4.7), not before the start.
+
 ---
 
 Built as part of a TCC (undergraduate thesis) project.

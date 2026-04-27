@@ -6,7 +6,7 @@ A World Cup 2026 prediction pool app built with Blazor WebAssembly and ASP.NET C
 
 BigBall lets users create and join prediction pools for World Cup matches. Track your predictions, earn points based on scoring tiers (PRD 4.8), and compete in real-time rankings with friends and colleagues.
 
-**Stack**: .NET 8 (Blazor WASM + API stub), MVVM architecture, dark theme
+**Stack**: .NET 8 (Blazor WASM + ASP.NET Core API), MVVM architecture, dark theme
 
 ## Quick Start
 
@@ -70,20 +70,18 @@ After the container is healthy, open the Seq UI at **http://localhost:5341**. Th
 
 ### Login
 
-Use any email + password (stub auth). Example:
-- Email: `joao.pereira@gmail.com`
-- Password: `x`
+Register and sign in with the email and password (or OAuth providers) you configure in your Supabase project. The app does not ship with demo users or passwords.
 
 ## What's Inside
 
 - **BigBall.Domain**: Scoring engine (20/16/15/10/5/0 points + penalties)
-- **BigBall.Api**: Minimal API with in-memory data + JWT auth
+- **BigBall.Api**: Minimal API backed by PostgreSQL (Supabase) + JWT auth
 - **BigBall.Web**: Blazor WASM frontend (4 screens: Login, Home, Pool Detail, Predict)
 - **BigBall.Client.Core**: Shared MVVM + HTTP clients (reusable for future MAUI app)
 
 ## Notes
 
-This is a **stub implementation** with in-memory data. Full Supabase integration and sports data provider are out of scope for this iteration.
+This is a thesis-scale implementation: some product areas are simplified or still evolving. Match data can be loaded from the bundled World Cup 2026 fixture file when enabled in configuration.
 
 Predictions close at **official kickoff** (see PRD 4.7), not before the start.
 

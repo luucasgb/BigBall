@@ -17,5 +17,7 @@ builder.Services.AddScoped<ITokenStore, LocalStorageTokenStore>();
 builder.Services.AddScoped<IUserProfileStore, LocalUserProfileStore>();
 builder.Services.AddScoped<IAppNavigator, BlazorAppNavigator>();
 builder.Services.AddScoped<IAuthSession, WebAuthSession>();
+builder.Services.AddScoped<ICreatePoolDialogService, CreatePoolDialogService>();
+builder.Services.AddScoped<IJoinPoolDialogService, JoinPoolDialogService>();
 
 await builder.Build().RunAsync();

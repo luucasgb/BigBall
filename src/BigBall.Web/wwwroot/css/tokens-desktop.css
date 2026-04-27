@@ -10,7 +10,7 @@
   line-height: 1.45;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 256px 1fr;
+  grid-template-columns: 300px 1fr;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: 'cv11', 'ss01';
 }

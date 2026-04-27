@@ -1,4 +1,6 @@
 @* Top bar for desktop screens: search field + notification and action buttons. *@
+@inject ICreatePoolDialogService CreatePoolDialog
+@inject IJoinPoolDialogService JoinPoolDialog
 <div class="bb-topbar">
     <div class="bb-search">
         <Icon Path="@IconPaths.Search" Size="16" />
@@ -7,7 +9,8 @@
     </div>
     <div class="bb-topbar-actions">
         <button class="bb-topbar-btn"><Icon Path="@IconPaths.Bell" Size="18" /></button>
-        <button class="bb-topbar-btn primary"><Icon Path="@IconPaths.Plus" Size="16" /> Novo bolão</button>
+        <button type="button" class="bb-topbar-btn primary" @onclick="() => JoinPoolDialog.Open()"><Icon Path="@IconPaths.Lock" Size="16" /> Entrar com código</button>
+        <button type="button" class="bb-topbar-btn primary" @onclick="() => CreatePoolDialog.Open()"><Icon Path="@IconPaths.Plus" Size="16" /> Novo bolão</button>
     </div>
 </div>
 

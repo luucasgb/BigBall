@@ -76,7 +76,6 @@ try
         var sp = scope.ServiceProvider;
         var db = sp.GetRequiredService<BigBallDbContext>();
         await db.Database.MigrateAsync();
-        await DbSeeder.SeedAsync(db);
 
         var config = sp.GetRequiredService<IConfiguration>();
         var env = sp.GetRequiredService<IWebHostEnvironment>();

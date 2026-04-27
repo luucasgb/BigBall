@@ -1,5 +1,8 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using BigBall.Api.Data;
+using BigBall.Domain.Entities;
+using BigBall.Domain.Enums;
 using BigBall.Domain.Scoring;
 using BigBall.Shared.Dtos;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +14,92 @@ public static class PoolsEndpoints
     public static IEndpointRouteBuilder MapPoolsEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/pools").RequireAuthorization().WithTags("Pools");
+
+        group.MapPost("", async (CreatePoolRequest req, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+
+            var name = (req.Name ?? string.Empty).Trim();
+            var prize = (req.PrizeDescription ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(name))
+            {
+                return Results.BadRequest(new { error = "Nome é obrigatório." });
+            }
+            if (string.IsNullOrEmpty(prize))
+            {
+                return Results.BadRequest(new { error = "Premiação é obrigatória." });
+            }
+            if (name.Length > 140)
+            {
+                return Results.BadRequest(new { error = "Nome excede o tamanho máximo (140 caracteres)." });
+            }
+            var description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim();
+            if (description is { Length: > 1000 })
+            {
+                return Results.BadRequest(new { error = "Descrição excede o tamanho máximo (1000 caracteres)." });
+            }
+            if (prize.Length > 300)
+            {
+                return Results.BadRequest(new { error = "Premiação excede o tamanho máximo (300 caracteres)." });
+            }
+            var entryCost = string.IsNullOrWhiteSpace(req.EntryCost) ? null : req.EntryCost.Trim();
+            if (entryCost is { Length: > 120 })
+            {
+                return Results.BadRequest(new { error = "Custo de entrada excede o tamanho máximo (120 caracteres)." });
+            }
+
+            if (!Enum.TryParse<PoolVisibility>(req.Visibility?.Trim(), ignoreCase: true, out var visibility))
+            {
+                return Results.BadRequest(new { error = "Visibilidade inválida. Use Public ou Private." });
+            }
+
+            string? inviteCode = null;
+            if (visibility == PoolVisibility.Private)
+            {
+                const int maxAttempts = 32;
+                for (var attempt = 0; attempt < maxAttempts; attempt++)
+                {
+                    var code = GenerateInviteCode();
+                    var taken = await db.Pools.AnyAsync(p => p.InviteCode == code, ct);
+                    if (!taken)
+                    {
+                        inviteCode = code;
+                        break;
+                    }
+                }
+                if (inviteCode is null)
+                {
+                    return Results.Problem("Não foi possível gerar um código de convite único.");
+                }
+            }
+
+            var poolId = Guid.NewGuid();
+            var now = DateTime.UtcNow;
+            db.Pools.Add(new Pool
+            {
+                Id = poolId,
+                Name = name,
+                Description = description,
+                Visibility = visibility,
+                InviteCode = inviteCode,
+                AdminUserId = userId,
+                PrizeDescription = prize,
+                EntryCost = entryCost,
+                CreatedUtc = now
+            });
+            db.PoolMemberships.Add(new PoolMembership
+            {
+                Id = Guid.NewGuid(),
+                PoolId = poolId,
+                UserId = userId,
+                Role = MembershipRole.Admin,
+                JoinedUtc = now
+            });
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new CreatePoolResponse(poolId, inviteCode));
+        })
+        .WithName("CreatePool");
 
         group.MapGet("/mine", async (ClaimsPrincipal user, BigBallDbContext db, RankingService ranking, CancellationToken ct) =>
         {
@@ -58,6 +147,51 @@ public static class PoolsEndpoints
         })
         .WithName("GetMyPools");
 
+        group.MapPost("/join", async (JoinPoolRequest req, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+            var raw = (req.InviteCode ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(raw))
+            {
+                return Results.BadRequest(new { error = "Código de convite é obrigatório." });
+            }
+            if (raw.Length > 32)
+            {
+                return Results.BadRequest(new { error = "Código de convite inválido." });
+            }
+
+            var normalized = raw.ToUpperInvariant();
+            var pool = await db.Pools.FirstOrDefaultAsync(
+                p => p.InviteCode == normalized
+                     && p.Visibility == PoolVisibility.Private
+                     && p.InviteCode != null,
+                ct);
+            if (pool is null)
+            {
+                return Results.NotFound(new { error = "Código de convite inválido." });
+            }
+
+            var alreadyMember = await db.PoolMemberships.AnyAsync(
+                m => m.PoolId == pool.Id && m.UserId == userId, ct);
+            if (alreadyMember)
+            {
+                return Results.Conflict(new { error = "Você já participa deste bolão." });
+            }
+
+            var now = DateTime.UtcNow;
+            db.PoolMemberships.Add(new PoolMembership
+            {
+                Id = Guid.NewGuid(),
+                PoolId = pool.Id,
+                UserId = userId,
+                Role = MembershipRole.Member,
+                JoinedUtc = now
+            });
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new JoinPoolResponse(pool.Id));
+        })
+        .WithName("JoinPoolByInvite");
+
         group.MapGet("/{poolId:guid}", async (Guid poolId, ClaimsPrincipal user, BigBallDbContext db, RankingService ranking, CancellationToken ct) =>
         {
             var userId = user.RequireUserId();
@@ -95,6 +229,21 @@ public static class PoolsEndpoints
         .WithName("GetPoolDetail");
 
         return app;
+    }
+
+    /// <summary>Uppercase alphanumeric without ambiguous I, O, 0, 1.</summary>
+    private static string GenerateInviteCode()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var bytes = new byte[8];
+        RandomNumberGenerator.Fill(bytes);
+        return string.Create(8, bytes, static (span, b) =>
+        {
+            for (var i = 0; i < span.Length; i++)
+            {
+                span[i] = chars[b[i] % chars.Length];
+            }
+        });
     }
 
     private static async Task<BigBall.Domain.Entities.Match?> FindNextMatchAsync(BigBallDbContext db, DateTime now, CancellationToken ct)

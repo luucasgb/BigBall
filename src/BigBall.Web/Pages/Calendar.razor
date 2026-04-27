@@ -4,6 +4,7 @@
 @using BigBall.Shared.Dtos
 @using BigBall.Shared.WorldCup
 @inject IMatchesApi MatchesApi
+@inject IPoolsApi PoolsApi
 
 <DesktopTopbar Placeholder="Buscar partida ou seleção…" />
 
@@ -80,15 +81,22 @@
                                          HomePredictionChanged="v => PredHome = v"
                                          AwayPredictionChanged="v => PredAway = v" />
                         <PoolSelector>
-                            @foreach (var pool in PoolSelections)
+                            @if (_poolSelections.Count == 0)
                             {
-                                <PoolSelectionItem Name="@pool.Name"
-                                                   Sub="@pool.Sub"
-                                                   Selected="@pool.Selected"
-                                                   OnToggle="() => pool.Selected = !pool.Selected" />
+                                <p class="calendar-pool-empty">Você ainda não participa de nenhum bolão. Crie ou entre em um bolão pelo menu.</p>
+                            }
+                            else
+                            {
+                                @foreach (var pool in _poolSelections)
+                                {
+                                    <PoolSelectionItem Name="@pool.Name"
+                                                       Sub="@pool.Sub"
+                                                       Selected="@pool.Selected"
+                                                       OnToggle="() => pool.Selected = !pool.Selected" />
+                                }
                             }
                         </PoolSelector>
-                        <CalendarDetailActions SelectedPoolCount="@PoolSelections.Count(p => p.Selected)"
+                        <CalendarDetailActions SelectedPoolCount="@_poolSelections.Count(p => p.Selected)"
                                                OnClear="ClearPrediction"
                                                OnSave="SavePrediction" />
                     </div>
@@ -144,17 +152,13 @@
 
     private sealed class PoolSelection
     {
+        public Guid PoolId { get; init; }
         public string Name { get; init; } = "";
         public string Sub { get; init; } = "";
         public bool Selected { get; set; }
     }
 
-    private List<PoolSelection> PoolSelections { get; } =
-    [
-        new() { Name = "Trampo TechCo",      Sub = "28 membros · você #1", Selected = true },
-        new() { Name = "Família Silva 2026", Sub = "12 membros · você #2", Selected = true },
-        new() { Name = "Galera do FC",       Sub = "8 membros · você #5",  Selected = false },
-    ];
+    private readonly List<PoolSelection> _poolSelections = new();
 
     private int PredHome { get; set; } = 0;
     private int PredAway { get; set; } = 0;
@@ -163,7 +167,31 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
+        await Task.WhenAll(LoadAsync(), LoadMyPoolsAsync());
+    }
+
+    private async Task LoadMyPoolsAsync()
+    {
+        _poolSelections.Clear();
+        try
+        {
+            var pools = await PoolsApi.GetMyPoolsAsync().ConfigureAwait(false);
+            for (var i = 0; i < pools.Count; i++)
+            {
+                var p = pools[i];
+                _poolSelections.Add(new PoolSelection
+                {
+                    PoolId = p.Id,
+                    Name = p.Name,
+                    Sub = $"{p.MemberCount} membros · você #{p.MyRank}",
+                    Selected = i == 0
+                });
+            }
+        }
+        catch (Exception)
+        {
+            // Unauthenticated or API error: calendar still loads matches.
+        }
     }
 
     private async Task LoadAsync()
@@ -351,6 +379,13 @@
     .calendar-hint {
         color: var(--fg-2);
         font-size: 14px;
+    }
+
+    .calendar-pool-empty {
+        margin: 0;
+        font-size: 13px;
+        color: var(--fg-3);
+        line-height: 1.4;
     }
 
     .calendar-layout {

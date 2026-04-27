@@ -43,3 +43,16 @@ public sealed record RankingRowDto(
     int TrendLastMatch,
     bool IsMe,
     int? TieGroupId);
+
+public sealed record CreatePoolRequest(
+    string Name,
+    string? Description,
+    string Visibility,
+    string PrizeDescription,
+    string? EntryCost);
+
+public sealed record CreatePoolResponse(Guid PoolId, string? InviteCode);
+
+public sealed record JoinPoolRequest(string InviteCode);
+
+public sealed record JoinPoolResponse(Guid PoolId);

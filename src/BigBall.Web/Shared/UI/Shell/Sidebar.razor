@@ -1,4 +1,7 @@
 @* Fixed left-nav sidebar shared across all desktop screens. *@
+@using BigBall.Client.Core.Abstractions
+@inject IAuthApi AuthApi
+@inject ITokenStore TokenStore
 
 <SidebarFrame>
     <div class="bb-logo">
@@ -31,11 +34,39 @@
                     Href="/profile"
                     IsActive="@(Active == "profile")" />
 
-    <SidebarUserFooter Name="@UserName" Email="@UserEmail" />
+    <SidebarUserFooter Name="@ResolvedUserName" Email="@ResolvedUserEmail" AvatarUrl="@ResolvedAvatarUrl" />
 </SidebarFrame>
 
 @code {
     [Parameter] public string Active { get; set; } = string.Empty;
-    [Parameter] public string UserName { get; set; } = "João Pereira";
-    [Parameter] public string UserEmail { get; set; } = "joao.pereira@gmail.com";
+    [Parameter] public string UserName { get; set; } = string.Empty;
+    [Parameter] public string UserEmail { get; set; } = string.Empty;
+
+    private string ResolvedUserName { get; set; } = string.Empty;
+    private string ResolvedUserEmail { get; set; } = string.Empty;
+    private string? ResolvedAvatarUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResolvedUserName = UserName;
+        ResolvedUserEmail = UserEmail;
+
+        var token = await TokenStore.GetTokenAsync();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return;
+        }
+
+        try
+        {
+            var profile = await AuthApi.GetMyProfileAsync();
+            ResolvedUserName = string.IsNullOrWhiteSpace(profile.DisplayName) ? UserName : profile.DisplayName;
+            ResolvedUserEmail = string.IsNullOrWhiteSpace(profile.Email) ? UserEmail : profile.Email;
+            ResolvedAvatarUrl = string.IsNullOrWhiteSpace(profile.AvatarUrl) ? null : profile.AvatarUrl;
+        }
+        catch
+        {
+            // Keep provided fallback values when profile fetch fails.
+        }
+    }
 }

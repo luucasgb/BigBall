@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BigBall.Api.Data;
 using BigBall.Domain.Entities;
 using BigBall.Shared.Dtos;
+using Microsoft.EntityFrameworkCore;
 
 namespace BigBall.Api.Endpoints;
 
@@ -11,7 +12,7 @@ public static class PredictionsEndpoints
     {
         // PRD 4.7: server-side enforcement — PUT returns 409 LOCKED if UtcNow >= LockUtc.
         app.MapPut("/api/pools/{poolId:guid}/matches/{matchId:guid}/prediction",
-            (Guid poolId, Guid matchId, UpsertPredictionRequest req, ClaimsPrincipal user, InMemoryStore store) =>
+            async (Guid poolId, Guid matchId, UpsertPredictionRequest req, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
         {
             var userId = user.RequireUserId();
 
@@ -19,15 +20,16 @@ public static class PredictionsEndpoints
             {
                 return Results.BadRequest(new { error = "Placar fora do intervalo permitido (0–20)." });
             }
-            if (!store.Pools.ContainsKey(poolId))
+            if (!await db.Pools.AnyAsync(p => p.Id == poolId, ct))
             {
                 return Results.NotFound(new { error = "Bolão não encontrado." });
             }
-            if (!store.Matches.TryGetValue(matchId, out var match))
+            var match = await db.Matches.FirstOrDefaultAsync(m => m.Id == matchId, ct);
+            if (match is null)
             {
                 return Results.NotFound(new { error = "Partida não encontrada." });
             }
-            var isMember = store.MembersOf(poolId).Any(m => m.UserId == userId);
+            var isMember = await db.PoolMemberships.AnyAsync(m => m.PoolId == poolId && m.UserId == userId, ct);
             if (!isMember)
             {
                 return Results.Forbid();
@@ -37,7 +39,8 @@ public static class PredictionsEndpoints
                 return Results.Json(LockedError.Default, statusCode: StatusCodes.Status409Conflict);
             }
 
-            var existing = store.FindPrediction(userId, poolId, matchId);
+            var existing = await db.Predictions.FirstOrDefaultAsync(
+                p => p.UserId == userId && p.PoolId == poolId && p.MatchId == matchId, ct);
             Prediction saved;
             if (existing is null)
             {
@@ -51,7 +54,7 @@ public static class PredictionsEndpoints
                     Away = req.Away,
                     PenaltyWinnerCode = req.PenaltyWinnerCode
                 };
-                store.Predictions.TryAdd(saved.Id, saved);
+                db.Predictions.Add(saved);
             }
             else
             {
@@ -61,6 +64,8 @@ public static class PredictionsEndpoints
                 existing.UpdatedUtc = DateTime.UtcNow;
                 saved = existing;
             }
+
+            await db.SaveChangesAsync(ct);
 
             var dto = new PredictionDto(saved.MatchId, saved.Home, saved.Away, saved.PenaltyWinnerCode, saved.UpdatedUtc);
             return Results.Ok(dto);

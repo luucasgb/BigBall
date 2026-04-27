@@ -1,5 +1,6 @@
 @page "/login"
 @inject LoginViewModel VM
+@inject NavigationManager Nav
 @implements IDisposable
 
 <div class="bb-auth-page theme-dark">
@@ -14,9 +15,18 @@
                     Disabled="@(!VM.LoginCommand.CanExecute(null))"
                     OnClick="ExecuteLogin" />
 
-        <AuthFooter>
-            Stub de autenticação — qualquer e-mail + senha não-vazios funcionam.
-        </AuthFooter>
+        <button class="bb-btn bb-btn-outline auth-google-button"
+                type="button"
+                disabled="@VM.IsBusy"
+                @onclick="StartGoogleLogin">
+            Entrar com Google
+        </button>
+
+        <p class="auth-switch">
+            <a class="auth-switch-link" href="/register">Criar conta</a>
+        </p>
+
+        <AuthFooter>Autenticação via Supabase (e-mail/senha + Google OAuth).</AuthFooter>
     </AuthCard>
 </div>
 
@@ -26,6 +36,38 @@
     private void OnVmChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
 
     private async Task ExecuteLogin() => await VM.LoginCommand.ExecuteAsync(null);
+    private async Task StartGoogleLogin()
+    {
+        var callback = $"{Nav.BaseUri.TrimEnd('/')}/auth/callback";
+        await VM.StartGoogleLoginCommand.ExecuteAsync(callback);
+        if (!string.IsNullOrWhiteSpace(VM.GoogleOAuthUrl))
+        {
+            Nav.NavigateTo(VM.GoogleOAuthUrl, forceLoad: true);
+        }
+    }
 
     public void Dispose() => VM.PropertyChanged -= OnVmChanged;
 }
+
+<style>
+    .auth-google-button {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .auth-switch {
+        text-align: center;
+        margin: 0;
+        font-size: 14px;
+    }
+
+    .auth-switch-link {
+        color: var(--brand-strong);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .auth-switch-link:hover {
+        text-decoration: underline;
+    }
+</style>

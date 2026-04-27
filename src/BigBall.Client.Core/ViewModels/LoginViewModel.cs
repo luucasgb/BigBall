@@ -28,6 +28,9 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private ProfileDto? _profile;
 
+    [ObservableProperty]
+    private string? _googleOAuthUrl;
+
     [RelayCommand]
     private Task LoginAsync(CancellationToken ct) => RunAsync(async token =>
     {
@@ -38,7 +41,14 @@ public partial class LoginViewModel : ViewModelBase
         }
         var response = await _auth.LoginAsync(new LoginRequest(Email.Trim(), Password), token);
         await _tokens.SetTokenAsync(response.Token, token);
-        Profile = response.Profile;
+        Profile = await _auth.GetMyProfileAsync(token);
         _navigator.NavigateTo("/", replace: true);
+    }, ct);
+
+    [RelayCommand]
+    private Task StartGoogleLoginAsync(string redirectTo, CancellationToken ct) => RunAsync(async token =>
+    {
+        var response = await _auth.GetGoogleUrlAsync(redirectTo, token);
+        GoogleOAuthUrl = response.Url;
     }, ct);
 }

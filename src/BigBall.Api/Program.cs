@@ -2,8 +2,8 @@ using BigBall.Api.Auth;
 using BigBall.Api.Data;
 using BigBall.Api.Endpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
 try
@@ -14,12 +14,15 @@ try
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration));
 
-    // STUB — substituir por Supabase JWT conforme TechSpec §4.3. Chave em appsettings NÃO é segredo de produção.
-    var jwtIssuer = new StubJwtIssuer(builder.Configuration);
-    builder.Services.AddSingleton(jwtIssuer);
+    builder.Services.Configure<SupabaseAuthOptions>(
+        builder.Configuration.GetSection(SupabaseAuthOptions.SectionName));
+    var supabase = builder.Configuration.GetSection(SupabaseAuthOptions.SectionName).Get<SupabaseAuthOptions>()
+                   ?? throw new InvalidOperationException("Supabase configuration missing.");
 
-    builder.Services.AddSingleton<InMemoryStore>();
-    builder.Services.AddSingleton<RankingService>();
+    builder.Services.AddDbContext<BigBallDbContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString("Supabase")));
+    builder.Services.AddScoped<RankingService>();
+    builder.Services.AddHttpClient<SupabasePasswordAuthClient>();
 
     var corsOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>()
                       ?? new[] { "http://localhost:5180" };
@@ -35,17 +38,15 @@ try
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtIssuer.Issuer,
-                ValidAudience = jwtIssuer.Audience,
-                IssuerSigningKey = jwtIssuer.SigningKey,
-                ClockSkew = TimeSpan.FromSeconds(30)
-            };
+            // Keep JWT claim types as issued by Supabase ("email", "sub", …) instead of mapping to long SOAP URIs.
+            options.MapInboundClaims = false;
+            options.Authority = supabase.AuthIssuer;
+            options.MetadataAddress = $"{supabase.AuthIssuer}/.well-known/openid-configuration";
+            options.TokenValidationParameters.ValidAudience = supabase.JwtAudience;
+            options.TokenValidationParameters.ValidateAudience = true;
+            options.TokenValidationParameters.ValidateIssuer = true;
+            options.TokenValidationParameters.ValidateLifetime = true;
+            options.TokenValidationParameters.ClockSkew = TimeSpan.FromSeconds(30);
         });
     builder.Services.AddAuthorization();
 
@@ -61,8 +62,12 @@ try
         app.Environment.EnvironmentName,
         app.Environment.ContentRootPath);
 
-    // Populate in-memory seed data on startup.
-    SeedData.Populate(app.Services.GetRequiredService<InMemoryStore>());
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<BigBallDbContext>();
+        await db.Database.MigrateAsync();
+        await DbSeeder.SeedAsync(db);
+    }
 
     if (app.Environment.IsDevelopment())
     {

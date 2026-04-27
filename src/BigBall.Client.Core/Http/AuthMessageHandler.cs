@@ -47,6 +47,7 @@ public sealed class AuthMessageHandler : DelegatingHandler
     private static bool ShouldAttachBearer(HttpRequestMessage request)
     {
         var path = request.RequestUri?.AbsolutePath.TrimEnd('/') ?? "";
-        return !string.Equals(path, "/api/auth/login", StringComparison.OrdinalIgnoreCase);
+        return !string.Equals(path, "/api/auth/login", StringComparison.OrdinalIgnoreCase)
+               && !string.Equals(path, "/api/auth/google-url", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -1,5 +1,12 @@
 @page "/profile"
+@using System.Globalization
+@using BigBall.Client.Core.Abstractions
+@using BigBall.Shared.Dtos
 @inject IAuthSession AuthSession
+@inject IAuthApi AuthApi
+@inject IPoolsApi PoolsApi
+@inject ITokenStore TokenStore
+@inject NavigationManager Nav
 
 <div class="bb-desk theme-dark">
     <Sidebar Active="profile" />
@@ -14,29 +21,40 @@
         </PageHeader>
 
         <div class="bb-content">
+            @if (_isBusy)
+            {
+                <div class="profile-loading">Carregando perfil…</div>
+            }
+            else if (_error is not null)
+            {
+                <div class="profile-error">@_error</div>
+            }
+            else if (_profile is not null)
+            {
             <ProfileHero
-                Name="@ProfileName"
-                Handle="@ProfileHandle"
-                Email="@ProfileEmail"
-                MemberSince="Membro desde mar/2026"
+                Name="@_profile.DisplayName"
+                AvatarUrl="@_profile.AvatarUrl"
+                Handle="@GetHandleFromEmail(_profile.Email)"
+                Email="@_profile.Email"
+                MemberSince="@FormatMemberSince(_profile.CreateDate)"
                 Timezone="America/São_Paulo (BRT)"
-                AdminOfLabel="Admin de bolão · 1"
-                MemberLabel="Membro · 3 bolões"
-                KpiItems="@ProfileKpiItems" />
+                AdminOfLabel="@_adminOfLabel"
+                MemberLabel="@_memberLabel"
+                KpiItems="@_kpiItems" />
 
             <div class="profile-layout">
                 <div class="profile-column-left">
                     <ScoringBandsCard
                         Title="Pontos por faixa"
-                        Subtitle="todos os bolões"
+                        Subtitle="dados de exemplo (resumo global em breve)"
                         Items="@ScoringBandItems" />
 
                     <SubmissionsCard
                         Title="Palpites enviados"
-                        Count="36"
-                        Total="38"
-                        FooterLeft="Taxa de acerto: 71%"
-                        FooterRight="2 perdidas" />
+                        Count="0"
+                        Total="0"
+                        FooterLeft="Estatística global em breve"
+                        FooterRight="—" />
                 </div>
 
                 <div class="profile-column-center">
@@ -48,13 +66,13 @@
                     <MyPoolsCard
                         Title="Meus bolões"
                         ViewAllLabel="Ver todos"
-                        Items="@PoolItems" />
+                        Items="@_poolItems" />
                 </div>
 
                 <div class="profile-column-right">
                     <AccountSettingsCard
                         Title="Conta"
-                        Items="@AccountSettingsItems" />
+                        Items="@_accountSettingsItems" />
 
                     <button type="button"
                             class="bb-btn bb-btn-ghost logout-btn"
@@ -64,12 +82,106 @@
                     </button>
                 </div>
             </div>
+            }
         </div>
     </main>
 </div>
 
 @code {
+    private bool _isBusy = true;
+    private string? _error;
+    private ProfileDto? _profile;
+    private IReadOnlyList<ProfileKpis.KpiItem> _kpiItems = [];
+    private IReadOnlyList<MyPoolsCard.PoolItem> _poolItems = [];
+    private IReadOnlyList<AccountSettingsCard.SettingRow> _accountSettingsItems = [];
+    private string? _adminOfLabel;
+    private string _memberLabel = string.Empty;
     private bool _loggingOut;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(await TokenStore.GetTokenAsync()))
+        {
+            Nav.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        try
+        {
+            var profileTask = AuthApi.GetMyProfileAsync();
+            var poolsTask = PoolsApi.GetMyPoolsAsync();
+            await Task.WhenAll(profileTask, poolsTask);
+
+            _profile = await profileTask;
+            var pools = await poolsTask;
+
+            _adminOfLabel = null; /* Membro de bolão exige detalhe por bolão; acrescentar quando a API expuser o papel. */
+            _memberLabel = pools.Count == 0
+                ? "Membro · 0 bolões"
+                : $"Membro · {pools.Count} bolão(ões)";
+
+            _kpiItems = BuildKpiItems(pools);
+            _poolItems = pools
+                .Select(p => new MyPoolsCard.PoolItem(p.Name, p.MemberCount, false, p.MyRank, p.MyPoints))
+                .ToList();
+            _accountSettingsItems = BuildAccountSettings(_profile);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Não foi possível carregar o perfil. {ex.Message}";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private static IReadOnlyList<AccountSettingsCard.SettingRow> BuildAccountSettings(ProfileDto p) =>
+    [
+        new(IconPaths.User, "Nome de exibição", p.DisplayName),
+        new(IconPaths.Bell, "Notificações", "Lock T-5min · resultados"),
+        new(IconPaths.Globe, "Fuso horário", "America/São_Paulo (BRT)"),
+        new(IconPaths.Lock, "Privacidade & dados", "LGPD · exportar · excluir")
+    ];
+
+    private static IReadOnlyList<ProfileKpis.KpiItem> BuildKpiItems(IReadOnlyList<MyPoolDto> pools)
+    {
+        if (pools.Count == 0)
+        {
+            return
+            [
+                new("Pontos totais", "0", "nenhum bolão ainda", IsHighlight: true),
+                new("Melhor posição", "—", "—"),
+                new("Placar exato", "—", "em breve"),
+                new("Bônus pênaltis", "—", "em breve")
+            ];
+        }
+
+        var totalPoints = pools.Sum(p => p.MyPoints);
+        var best = pools.Min(p => p.MyRank);
+        return
+        [
+            new("Pontos totais", totalPoints.ToString(CultureInfo.InvariantCulture), $"em {pools.Count} bolão(ões)", IsHighlight: true),
+            new("Melhor posição", $"#{best}", "menor # entre teus bolões"),
+            new("Placar exato", "—", "em breve"),
+            new("Bônus pênaltis", "—", "em breve")
+        ];
+    }
+
+    private static string GetHandleFromEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return string.Empty;
+        }
+
+        var at = email.IndexOf('@');
+        var local = at > 0 ? email[..at] : email;
+        return "@" + local;
+    }
+
+    private static string FormatMemberSince(DateTime utc) =>
+        $"Membro desde {utc.ToString("MMM/yyyy", CultureInfo.GetCultureInfo("pt-BR"))}";
 
     private async Task LogoutAsync()
     {
@@ -85,56 +197,19 @@
         }
     }
 
-    private const string ProfileName   = "João Pereira";
-    private const string ProfileHandle = "@joao.pereira";
-    private const string ProfileEmail  = "joao.pereira@gmail.com";
-
-    // KPI items for the hero section
-    private static readonly IReadOnlyList<ProfileKpis.KpiItem> ProfileKpiItems =
-    [
-        new("Pontos totais",  "549",  "em 3 bolões",    IsHighlight: true),
-        new("Melhor posição", "#1",   "Trampo TechCo"),
-        new("Placar exato",   "6×",   "20 pts cada"),
-        new("Bônus pênaltis", "3×",   "+3 pts cada"),
-    ];
-
-    // Scoring band items
     private static readonly IReadOnlyList<ScoringBandsCard.BandItem> ScoringBandItems =
     [
-        new(20, "Placar exato", 6),
-        new(16, "Vencedor + saldo", 11),
-        new(15, "Vencedor + 1 placar", 4),
-        new(10, "Apenas vencedor", 8),
-        new(5,  "Apenas 1 placar", 5),
-        new(0,  "Sem pontos", 2),
+        new(20, "Placar exato", 0),
+        new(16, "Vencedor + saldo", 0),
+        new(15, "Vencedor + 1 placar", 0),
+        new(10, "Apenas vencedor", 0),
+        new(5,  "Apenas 1 placar", 0),
+        new(0,  "Sem pontos", 0)
     ];
 
-    // Recent activity items
     private static readonly IReadOnlyList<ActivityTable.ActivityRow> ActivityItems =
     [
-        new("FRA × SUI",  "Família Silva",  "2×1", "2×1", 20, "Há 2h"),
-        new("POR × CRO",  "Trampo TechCo", "3×0", "2×0", 15, "Ontem"),
-        new("ENG × USA",  "Trampo TechCo", "1×1", "2×1", 5,  "Ontem"),
-        new("BRA × SRB",  "Galera do FC",  "2×0", "1×0", 16, "Sex"),
-        new("NED × ECU",  "Família Silva",  "1×1", "1×1", 20, "Sex"),
-        new("KOR × URU",  "Trampo TechCo", "0×0", "1×2", 0,  "Qui"),
-    ];
-
-    // User's pools
-    private static readonly IReadOnlyList<MyPoolsCard.PoolItem> PoolItems =
-    [
-        new("Trampo TechCo",      28, true,  1, 267),
-        new("Família Silva 2026", 12, false, 2, 184),
-        new("Galera do FC",        8, false, 5, 98),
-    ];
-
-    // Account settings
-    private static readonly IReadOnlyList<AccountSettingsCard.SettingRow> AccountSettingsItems =
-    [
-        new(IconPaths.User,  "Nome de exibição",    "João Pereira"),
-        new(IconPaths.Bell,  "Notificações",         "Lock T-5min · resultados"),
-        new(IconPaths.Globe, "Fuso horário",         "America/São_Paulo (BRT)"),
-        new(IconPaths.Lock,  "Privacidade & dados",  "LGPD · exportar · excluir"),
+        new("—",  "—",  "—", "—", 0, "Dados de exemplo")
     ];
 }
 
@@ -159,5 +234,15 @@
         height: 44px;
         color: var(--danger);
         border-color: color-mix(in oklab, var(--danger) 35%, var(--line));
+    }
+
+    .profile-loading,
+    .profile-error {
+        padding: 24px 40px;
+        color: var(--fg-2);
+    }
+
+    .profile-error {
+        color: var(--danger);
     }
 </style>

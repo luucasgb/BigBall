@@ -58,8 +58,17 @@ public class LoginViewModelTests
             CallCount++;
             return Task.FromResult(new LoginResponse(
                 _token,
-                new ProfileDto(Guid.NewGuid(), "João Pereira", null)));
+                new ProfileDto(Guid.NewGuid(), "joao.pereira@gmail.com", "João Pereira", null, DateTime.UtcNow)));
         }
+
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<OAuthRedirectUrlResponse> GetGoogleUrlAsync(string redirectTo, CancellationToken ct = default)
+            => Task.FromResult(new OAuthRedirectUrlResponse("https://example.com/auth"));
+
+        public Task<ProfileDto> GetMyProfileAsync(CancellationToken ct = default)
+            => Task.FromResult(new ProfileDto(Guid.NewGuid(), "joao.pereira@gmail.com", "João Pereira", null, DateTime.UtcNow));
     }
 
     private sealed class FakeTokenStore : ITokenStore

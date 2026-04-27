@@ -2,7 +2,7 @@
 @inject IAuthSession AuthSession
 
 <div class="bb-sidebar-foot">
-    <Avatar Name="@Name" Size="36" />
+    <Avatar Name="@Name" ImageUrl="@AvatarUrl" Size="36" />
     <div class="sidebar-user-meta">
         <div class="sidebar-user-name">@Name</div>
         <div class="sidebar-user-email">@Email</div>
@@ -20,6 +20,7 @@
 @code {
     [Parameter] public string Name { get; set; } = string.Empty;
     [Parameter] public string Email { get; set; } = string.Empty;
+    [Parameter] public string? AvatarUrl { get; set; }
 
     private bool _loggingOut;
 

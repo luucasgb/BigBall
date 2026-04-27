@@ -28,6 +28,7 @@ public static class ClientCoreServiceCollectionExtensions
                 .AddHttpMessageHandler<AuthMessageHandler>();
 
         services.AddTransient<LoginViewModel>();
+        services.AddTransient<RegisterViewModel>();
         services.AddTransient<HomeViewModel>();
         services.AddTransient<PoolDetailViewModel>();
         services.AddTransient<PredictViewModel>();

@@ -36,11 +36,11 @@ public static class SeedData
 
     private static void SeedProfiles(InMemoryStore s)
     {
-        Add(s, new Profile { Id = JoaoId,  Email = "joao.pereira@gmail.com", DisplayName = "João Pereira" });
-        Add(s, new Profile { Id = AnaId,   Email = "ana.luz@gmail.com",       DisplayName = "Ana Luz" });
-        Add(s, new Profile { Id = BrunoId, Email = "bruno.r@gmail.com",       DisplayName = "Bruno R." });
-        Add(s, new Profile { Id = CarlaId, Email = "carla.m@gmail.com",       DisplayName = "Carla M." });
-        Add(s, new Profile { Id = DiegoId, Email = "diego.f@gmail.com",       DisplayName = "Diego F." });
+        Add(s, new Profile { Id = JoaoId,  Email = "joao.pereira@gmail.com", DisplayName = "João Pereira", CreateDate = DateTime.UtcNow });
+        Add(s, new Profile { Id = AnaId,   Email = "ana.luz@gmail.com",       DisplayName = "Ana Luz", CreateDate = DateTime.UtcNow });
+        Add(s, new Profile { Id = BrunoId, Email = "bruno.r@gmail.com",       DisplayName = "Bruno R.", CreateDate = DateTime.UtcNow });
+        Add(s, new Profile { Id = CarlaId, Email = "carla.m@gmail.com",       DisplayName = "Carla M.", CreateDate = DateTime.UtcNow });
+        Add(s, new Profile { Id = DiegoId, Email = "diego.f@gmail.com",       DisplayName = "Diego F.", CreateDate = DateTime.UtcNow });
 
         static void Add(InMemoryStore s, Profile p) => s.Profiles.TryAdd(p.Id, p);
     }
@@ -109,7 +109,8 @@ public static class SeedData
                 {
                     Id = fillerId,
                     Email = $"filler{i}.{poolId.ToString()[..4]}@bigball.local",
-                    DisplayName = GenerateFillerName(i, poolId)
+                    DisplayName = GenerateFillerName(i, poolId),
+                    CreateDate = DateTime.UtcNow
                 });
                 var membershipId = Guid.NewGuid();
                 s.Memberships.TryAdd(membershipId, new PoolMembership

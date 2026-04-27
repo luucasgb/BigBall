@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using BigBall.Api.Data;
 using BigBall.Shared.Dtos;
+using Microsoft.EntityFrameworkCore;
 
 namespace BigBall.Api.Endpoints;
 
@@ -10,25 +11,28 @@ public static class MatchesEndpoints
     {
         var group = app.MapGroup("/api/matches").RequireAuthorization().WithTags("Matches");
 
-        group.MapGet("/{matchId:guid}", (Guid matchId, Guid poolId, ClaimsPrincipal user, InMemoryStore store) =>
+        group.MapGet("/{matchId:guid}", async (Guid matchId, Guid poolId, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
         {
             var userId = user.RequireUserId();
 
-            if (!store.Matches.TryGetValue(matchId, out var match))
+            var match = await db.Matches.FirstOrDefaultAsync(m => m.Id == matchId, ct);
+            if (match is null)
             {
                 return Results.NotFound(new { error = "Partida não encontrada." });
             }
-            if (!store.Pools.ContainsKey(poolId))
+            var poolExists = await db.Pools.AnyAsync(p => p.Id == poolId, ct);
+            if (!poolExists)
             {
                 return Results.NotFound(new { error = "Bolão não encontrado." });
             }
-            var isMember = store.MembersOf(poolId).Any(m => m.UserId == userId);
+            var isMember = await db.PoolMemberships.AnyAsync(m => m.PoolId == poolId && m.UserId == userId, ct);
             if (!isMember)
             {
                 return Results.Forbid();
             }
 
-            var pred = store.FindPrediction(userId, poolId, matchId);
+            var pred = await db.Predictions.FirstOrDefaultAsync(
+                p => p.UserId == userId && p.PoolId == poolId && p.MatchId == matchId, ct);
             var predDto = pred is null
                 ? null
                 : new PredictionDto(pred.MatchId, pred.Home, pred.Away, pred.PenaltyWinnerCode, pred.UpdatedUtc);

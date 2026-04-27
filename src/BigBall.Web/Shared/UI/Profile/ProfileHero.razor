@@ -3,7 +3,7 @@
     <div class="profile-hero-container">
         <div class="profile-hero-left">
             <div class="profile-hero-avatar">
-                <Avatar Name="@Name" Size="104" />
+                <Avatar Name="@Name" ImageUrl="@AvatarUrl" Size="104" />
             </div>
             <div class="profile-hero-info">
                 <div class="profile-hero-name-row">
@@ -40,6 +40,7 @@
 
 @code {
     [Parameter] public string Name { get; set; } = "";
+    [Parameter] public string? AvatarUrl { get; set; }
     [Parameter] public string Handle { get; set; } = "";
     [Parameter] public string Email { get; set; } = "";
     [Parameter] public string MemberSince { get; set; } = "";

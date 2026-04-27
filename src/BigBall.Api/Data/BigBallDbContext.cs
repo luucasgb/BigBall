@@ -63,9 +63,11 @@ public sealed class BigBallDbContext : DbContext
             entity.Property(x => x.Id).HasColumnName("id");
             entity.Property(x => x.Phase).HasColumnName("phase").HasConversion<string>().HasMaxLength(24);
             entity.Property(x => x.GroupLabel).HasColumnName("group_label").HasMaxLength(64);
-            entity.Property(x => x.HomeCode).HasColumnName("home_code").HasMaxLength(8);
-            entity.Property(x => x.AwayCode).HasColumnName("away_code").HasMaxLength(8);
+            entity.Property(x => x.HomeCode).HasColumnName("home_code").HasMaxLength(32);
+            entity.Property(x => x.AwayCode).HasColumnName("away_code").HasMaxLength(32);
+            entity.Property(x => x.ExternalKey).HasColumnName("external_key").HasMaxLength(64);
             entity.Property(x => x.KickoffUtc).HasColumnName("kickoff_utc");
+            entity.HasIndex(x => x.ExternalKey).IsUnique();
             entity.Property(x => x.Venue).HasColumnName("venue").HasMaxLength(200);
             entity.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(24);
             entity.Property(x => x.ReferenceHome).HasColumnName("reference_home");

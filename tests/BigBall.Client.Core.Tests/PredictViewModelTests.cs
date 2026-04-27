@@ -110,6 +110,12 @@ public class PredictViewModelTests
 
         public FakeMatchesApi(MatchDetailDto match) => _match = match;
 
+        public Task<IReadOnlyList<MatchCalendarRowDto>> GetMatchesInRangeAsync(
+            DateTime fromUtc,
+            DateTime toUtc,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<MatchCalendarRowDto>>([]);
+
         public Task<MatchDetailDto> GetMatchAsync(Guid matchId, Guid poolId, CancellationToken ct = default)
         {
             CallCount++;

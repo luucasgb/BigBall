@@ -11,6 +11,40 @@ public static class MatchesEndpoints
     {
         var group = app.MapGroup("/api/matches").RequireAuthorization().WithTags("Matches");
 
+        group.MapGet("", async (DateTime? fromUtc, DateTime? toUtc, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var from = fromUtc ?? DateTime.MinValue;
+            var to = toUtc ?? DateTime.MaxValue;
+            if (from.Kind != DateTimeKind.Utc)
+            {
+                from = DateTime.SpecifyKind(from, DateTimeKind.Utc);
+            }
+
+            if (to.Kind != DateTimeKind.Utc)
+            {
+                to = DateTime.SpecifyKind(to, DateTimeKind.Utc);
+            }
+
+            var matches = await db.Matches
+                .AsNoTracking()
+                .Where(m => m.KickoffUtc >= from && m.KickoffUtc <= to)
+                .OrderBy(m => m.KickoffUtc)
+                .ToListAsync(ct);
+            var rows = matches
+                .Select(m => new MatchCalendarRowDto(
+                    m.Id,
+                    m.Phase.ToString(),
+                    m.GroupLabel,
+                    m.HomeCode,
+                    m.AwayCode,
+                    m.KickoffUtc,
+                    m.Venue,
+                    m.Status.ToString()))
+                .ToList();
+            return Results.Ok(rows);
+        })
+        .WithName("ListMatchesInRange");
+
         group.MapGet("/{matchId:guid}", async (Guid matchId, Guid poolId, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
         {
             var userId = user.RequireUserId();

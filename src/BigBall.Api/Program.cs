@@ -2,7 +2,10 @@ using BigBall.Api.Auth;
 using BigBall.Api.Data;
 using BigBall.Api.Endpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
@@ -70,9 +73,38 @@ try
 
     using (var scope = app.Services.CreateScope())
     {
-        var db = scope.ServiceProvider.GetRequiredService<BigBallDbContext>();
+        var sp = scope.ServiceProvider;
+        var db = sp.GetRequiredService<BigBallDbContext>();
         await db.Database.MigrateAsync();
         await DbSeeder.SeedAsync(db);
+
+        var config = sp.GetRequiredService<IConfiguration>();
+        var env = sp.GetRequiredService<IWebHostEnvironment>();
+        var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("BigBall.Api.Fixtures");
+        if (config.GetValue("Fixtures:ImportWorldCup2026", false))
+        {
+            // Single-arg StartsWith is translatable; the StringComparison overload is not.
+            var hasImported = await db.Matches.AnyAsync(
+                m => m.ExternalKey != null && m.ExternalKey.StartsWith("wc2026-"));
+            if (!hasImported)
+            {
+                var path = Path.Combine(AppContext.BaseDirectory, "Data", "Fixtures", "worldcup-2026.json");
+                if (!File.Exists(path))
+                {
+                    path = Path.Combine(env.ContentRootPath, "Data", "Fixtures", "worldcup-2026.json");
+                }
+
+                if (File.Exists(path))
+                {
+                    await WorldCup2026FixtureImporter.ImportAsync(db, path);
+                    logger.LogInformation("World Cup 2026 fixtures imported from {Path}", path);
+                }
+                else
+                {
+                    logger.LogWarning("Fixtures:ImportWorldCup2026 is true but worldcup-2026.json was not found.");
+                }
+            }
+        }
     }
 
     if (app.Environment.IsDevelopment())

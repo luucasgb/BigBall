@@ -54,42 +54,6 @@ public static class DbSeeder
             new PoolMembership { Id = Guid.NewGuid(), PoolId = trampoId, UserId = joaoId, Role = MembershipRole.Admin, JoinedUtc = now.AddDays(-20) },
             new PoolMembership { Id = Guid.NewGuid(), PoolId = trampoId, UserId = anaId, Role = MembershipRole.Member, JoinedUtc = now.AddDays(-15) });
 
-        var finishedId = Guid.NewGuid();
-        var nextId = Guid.NewGuid();
-        db.Matches.AddRange(
-            new Match
-            {
-                Id = finishedId,
-                Phase = MatchPhase.Groups,
-                GroupLabel = "Grupo A",
-                HomeCode = "ARG",
-                AwayCode = "CAN",
-                KickoffUtc = now.AddDays(-1),
-                Status = MatchStatus.Finished,
-                ReferenceHome = 2,
-                ReferenceAway = 1
-            },
-            new Match
-            {
-                Id = nextId,
-                Phase = MatchPhase.Groups,
-                GroupLabel = "Grupo B",
-                HomeCode = "BRA",
-                AwayCode = "SUI",
-                KickoffUtc = now.AddHours(2),
-                Status = MatchStatus.Scheduled
-            });
-
-        db.Predictions.Add(new Prediction
-        {
-            Id = Guid.NewGuid(),
-            UserId = joaoId,
-            PoolId = trampoId,
-            MatchId = finishedId,
-            Home = 2,
-            Away = 1
-        });
-
         await db.SaveChangesAsync(ct);
     }
 }

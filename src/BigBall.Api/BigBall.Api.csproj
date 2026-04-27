@@ -36,4 +36,10 @@
     <ProjectReference Include="..\BigBall.Domain\BigBall.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="Data\Fixtures\worldcup-2026.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

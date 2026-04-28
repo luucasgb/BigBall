@@ -1,5 +1,6 @@
 @* Fixed left-nav sidebar shared across all desktop screens. *@
 @using BigBall.Client.Core.Abstractions
+@using BigBall.Web.Shared.UI.Admin
 @inject IUserProfileStore UserProfileStore
 @implements IDisposable
 
@@ -33,6 +34,11 @@
                     Label="Perfil"
                     Href="/profile"
                     IsActive="@(Active == "profile")" />
+
+#if DEBUG
+    <SidebarNavSection>Admin</SidebarNavSection>
+    <WorldCup2026SportsApiProbeButton />
+#endif
 
     <SidebarUserFooter Name="@ResolvedUserName" Email="@ResolvedUserEmail" AvatarUrl="@ResolvedAvatarUrl" />
 </SidebarFrame>

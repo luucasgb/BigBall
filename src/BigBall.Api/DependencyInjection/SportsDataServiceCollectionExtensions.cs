@@ -44,6 +44,21 @@ public static class SportsDataServiceCollectionExtensions
 
                 services.AddTransient<ISportsDataSource>(sp =>
                     sp.GetRequiredService<SportsApiProSportsDataSource>());
+
+                services.AddHttpClient<SportsApiProWorldCup2026ProbeService>((sp, client) =>
+                    {
+                        var opts = sp.GetRequiredService<IOptions<SportsApiProOptions>>().Value;
+                        var baseUrl = opts.BaseUrl.Trim();
+                        if (string.IsNullOrEmpty(baseUrl))
+                            throw new InvalidOperationException("SportsApiPro:BaseUrl is required.");
+
+                        client.BaseAddress =
+                            new Uri(baseUrl.EndsWith("/", StringComparison.Ordinal) ? baseUrl : baseUrl + "/");
+                        // Many round fetches per click — allow headroom vs default 30s.
+                        client.Timeout = TimeSpan.FromSeconds(120);
+                    })
+                    .AddHttpMessageHandler<SportsApiProApiKeyHandler>()
+                    .AddPolicyHandler(BuildResiliencePolicy());
                 break;
 
             default:

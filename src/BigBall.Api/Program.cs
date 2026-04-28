@@ -139,6 +139,11 @@ try
     app.MapMatchesEndpoints();
     app.MapPredictionsEndpoints();
 
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapAdminSportsEndpoints();
+    }
+
     app.Run();
 }
 finally

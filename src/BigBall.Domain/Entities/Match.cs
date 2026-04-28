@@ -10,8 +10,17 @@ public sealed class Match
     public required string HomeCode { get; set; }
     public required string AwayCode { get; set; }
 
-    /// <summary>Idempotent import key, e.g. <c>wc2026-79</c> or <c>wc2026-…</c> for group games.</summary>
+    /// <summary>Idempotent import key, e.g. <c>wc2026-79</c> ou <c>wc2026-…</c> para grupos.</summary>
     public string? ExternalKey { get; set; }
+
+    /// <summary>SportsAPI Pro (ou equivalente) event id quando correlacionado ao calendário do fornecedor.</summary>
+    public string? ProviderExternalMatchId { get; set; }
+
+    /// <summary>Último <c>status.code</c> do fornecedor de dados (TechSpec §6.2).</summary>
+    public int? LastProviderStatusCode { get; set; }
+
+    /// <summary>Última vez que o job de sync obteve snapshot do fornecedor para esta partida.</summary>
+    public DateTime? ProviderLastSyncedUtc { get; set; }
 
     public required DateTime KickoffUtc { get; set; }
     public string? Venue { get; set; }

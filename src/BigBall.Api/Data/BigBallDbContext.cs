@@ -13,6 +13,7 @@ public sealed class BigBallDbContext : DbContext
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<HostCity> HostCities => Set<HostCity>();
     public DbSet<Prediction> Predictions => Set<Prediction>();
+    public DbSet<ProviderDailyApiUsage> ProviderDailyApiUsages => Set<ProviderDailyApiUsage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +80,9 @@ public sealed class BigBallDbContext : DbContext
             entity.Property(x => x.HomeCode).HasColumnName("home_code").HasMaxLength(32);
             entity.Property(x => x.AwayCode).HasColumnName("away_code").HasMaxLength(32);
             entity.Property(x => x.ExternalKey).HasColumnName("external_key").HasMaxLength(64);
+            entity.Property(x => x.ProviderExternalMatchId).HasColumnName("provider_external_match_id").HasMaxLength(32);
+            entity.Property(x => x.LastProviderStatusCode).HasColumnName("last_provider_status_code");
+            entity.Property(x => x.ProviderLastSyncedUtc).HasColumnName("provider_last_synced_utc");
             entity.Property(x => x.KickoffUtc).HasColumnName("kickoff_utc");
             entity.HasIndex(x => x.ExternalKey).IsUnique();
             entity.Property(x => x.Venue).HasColumnName("venue").HasMaxLength(200);
@@ -93,6 +97,14 @@ public sealed class BigBallDbContext : DbContext
             entity.Property(x => x.ReferenceAway).HasColumnName("reference_away");
             entity.Property(x => x.WentToPenalties).HasColumnName("went_to_penalties");
             entity.Property(x => x.PenaltyWinnerCode).HasColumnName("penalty_winner_code").HasMaxLength(8);
+        });
+
+        modelBuilder.Entity<ProviderDailyApiUsage>(entity =>
+        {
+            entity.ToTable("provider_daily_api_usage");
+            entity.HasKey(x => x.DayUtc);
+            entity.Property(x => x.DayUtc).HasColumnName("day_utc");
+            entity.Property(x => x.HttpGetCount).HasColumnName("http_get_count").IsRequired();
         });
 
         modelBuilder.Entity<Prediction>(entity =>

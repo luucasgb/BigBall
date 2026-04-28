@@ -1,6 +1,9 @@
 using BigBall.Api.Auth;
+using BigBall.Api.Configuration;
 using BigBall.Api.Data;
+using BigBall.Api.DependencyInjection;
 using BigBall.Api.Endpoints;
+using BigBall.Api.Sync;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +28,8 @@ try
 
     builder.Services.Configure<SupabaseAuthOptions>(
         builder.Configuration.GetSection(SupabaseAuthOptions.SectionName));
+
+    builder.Services.AddSportsData(builder.Configuration);
     var supabase = builder.Configuration.GetSection(SupabaseAuthOptions.SectionName).Get<SupabaseAuthOptions>()
                    ?? throw new InvalidOperationException("Supabase configuration missing.");
 
@@ -61,6 +66,13 @@ try
 
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
+
+    builder.Services.Configure<SportsApiProSyncOptions>(
+        builder.Configuration.GetSection(SportsApiProSyncOptions.SectionName));
+    builder.Services.AddMemoryCache();
+    builder.Services.AddScoped<IProviderDailyApiBudget, ProviderDailyApiBudgetService>();
+    builder.Services.AddScoped<MatchScheduleCorrelationService>();
+    builder.Services.AddHostedService<MatchFeedSyncHostedService>();
 
     var app = builder.Build();
 

@@ -1,7 +1,7 @@
 # BigBall — Technical Specification (Tech Spec)
 
-**Versão:** 1.2  
-**Data:** 23 de abril de 2026  
+**Versão:** 1.3  
+**Data:** 28 de abril de 2026  
 **Documento relacionado:** [PRD.md](./PRD.md) — requisitos de produto, regras de pontuação, lock, elegibilidade e auditoria **não** são repetidos aqui; este ficheiro cobre **stack**, integrações e decisões de implementação.
 
 ---
@@ -140,18 +140,40 @@ A escolha do fornecedor **não bloqueia** o modelo canónico `Match`, desde que 
 
 #### 6.2.1 Tabela de mapeamento — SportsAPI Pro (MVP)
 
-Preencher **Campo / path no payload** durante a implementação, com base na documentação real do tier contratado. A coluna **Gap** = *sim* quando o fornecedor **não** expuser dado suficiente para preencher o alvo canónico.
+Implementação de referência no repositório: `SportsApiProMapper` (leitura de estado via `GetStatusCode`, conversão via `MapLifecycleFromStatus`). O nó **`event`** obtém-se da raiz da resposta como `event`, `data`, ou raiz quando já contém `id` / `startTimestamp`.
+
+**Endpoints REST típicos (tier Football):** pedido principal `GET …/api/match/{id}`; opcionais **`/scores`** e **`/penalties`** quando o snapshot exigir enriquecimento (o custo acumulado de HTTP é tratado em **§6.2.5**).
 
 | Alvo canónico | Campo / path no payload (SportsAPI Pro) | Notas | Gap |
 | ------------- | ---------------------------------------- | ----- | --- |
-| ID estável da partida | *a preencher* | | |
-| Início oficial | *a preencher* | Fuso e formato normalizados para UTC no domínio | |
-| Estado da partida | *a preencher* | Alinhar a “não iniciada / ao vivo / concluída” usado no produto | |
-| Gols mandante (TR) | *a preencher* | **Não** mapear para placar após prorrogação | |
-| Gols visitante (TR) | *a preencher* | Idem | |
-| Houve prorrogação | *a preencher* | Se ausente, documentar implicação na coluna Notas | |
-| Houve disputa de pênaltis | *a preencher* | | |
-| Vencedor na disputa de pênaltis | *a preencher* | | |
+| ID estável da partida | `event.id` | ID numérico do fornecedor; no domínio tratar como string estável | não |
+| Início oficial | `event.startTimestamp` | Epoch Unix em **segundos** (UTC) no adapter; normalizar para instante único no domínio | não |
+| Estado da partida | `event.status.statusCode` **ou** `event.status.code`; fallback: valor numérico em `event.status` | Cruzar com a tabela **código → fase canónica** abaixo | não |
+| Gols mandante (TR) | `event.homeScore.normaltime`; alternativa **soma** `homeScore.period1` + `homeScore.period2`; último recurso `homeScore.display` / `homeScore.current` (apenas onde o código marca fiabilidade — ver `ExtractRegularTimeGoals`) | Não usar `display` como TR após EST/pênaltis sem `normaltime` ou lógica explícita | **sim** se, em fase pós‑TR, não existirem campos suficientes e o adapter assinalar lacuna TR |
+| Gols visitante (TR) | `event.awayScore.*` (espelho de mandante) | Idem quanto a `normaltime` vs períodos vs display | idem |
+| Houve prorrogação | *inferido dos códigos de estado* (40, 41, 110, …) | Não depende de um boolean dedicado obrigatório no JSON quando o ciclo de vida está coberto pelo código | não (desde que o código seja atualizado) |
+| Houve disputa de pênaltis | *inferido dos códigos* (50, 120, …) | Complementar com payload de **`/penalties`** quando aplicável | pode ser **sim** até existir resultado explícito |
+| Vencedor na disputa de pênaltis | Resposta `…/penalties` e campos agregados (ex.: `homePenaltyScore` / `awayPenaltyScore`, `winnerTeamId`, `winnerIsHomeTeam` — conforme payload real) | Bônus +3 só com disputa real (PRD 4.8) | **sim** se o endpoint não for obtido ou estiver incompleto |
+
+**Código numérico (`status`) → fase canónica** (`MatchLifecyclePhase` — espelho de `MapLifecycleFromStatus`):
+
+| `status.statusCode` / `status.code` | Fase canónica |
+| ----------------------------------- | ------------- |
+| `0` | `NotStarted` |
+| `6` | `FirstHalf` |
+| `7` | `SecondHalf` |
+| `31` | `Halftime` |
+| `40` | `ExtraTimeFirstHalf` |
+| `41` | `ExtraTimeSecondHalf` |
+| `50` | `PenaltyShootoutInProgress` |
+| `60` | `Postponed` |
+| `70` | `Canceled` |
+| `80` | `Interrupted` |
+| `90` | `Abandoned` |
+| `100` | `FinishedRegulation` |
+| `110` | `FinishedAfterExtraTime` |
+| `120` | `FinishedAfterPenalties` |
+| *outros / ausente* | `Unknown` |
 
 #### 6.2.2 Provedor adicional ou migração (ex.: FlashScore via RapidAPI)
 
@@ -160,6 +182,62 @@ Criar **nova** tabela com a mesma estrutura de alvos canónicos; **não** reutil
 #### 6.2.3 Comportamento quando Gap = sim ou TR inválido
 
 O job de sincronização **não inventa** gols de TR. Se a partida, pelo calendário interno, exigir resultado para pontuação e o canónico **TR** estiver indisponível ou marcado como gap: aplicar **PRD 4.11** (administrador de plataforma); quando o feed passar a fornecer TR mapeável, **prevalece** o provedor e dispara-se recálculo idempotente.
+
+#### 6.2.4 Semântica tempo regulamentar / prorrogação / pênaltis (SportsAPI Pro)
+
+Leitura **normativa** em conjunto com a tabela de códigos em **§6.2.1** e com o PRD (faixas 1–5 = TR em 4.8).
+
+- **Fim do tempo regulamentar (TR):** código **`100`** (`FinishedRegulation`). Placar TR deve vir preferencialmente de **`homeScore.normaltime` / `awayScore.normaltime`** (ou equivalente seguro definido no adapter).
+- **Prorrogação em curso:** **`40`** (`ExtraTimeFirstHalf`), **`41`** (`ExtraTimeSecondHalf`). **Encerramento após prorrogação (sem decisão apenas por pênaltis segundo o feed):** **`110`** (`FinishedAfterExtraTime`).
+- **Disputa de pênaltis:** **`50`** (`PenaltyShootoutInProgress`) durante a marcação; **`120`** (`FinishedAfterPenalties`) quando a partida fecha **após** pênaltis.
+- **Transição típica (polling contra `status`):** caminho para **há prorrogação** — segundo tempo **`7`** → intervalo/multi‑purpose **`31`** (`Halftime`) → início de prorrogação **`40`**. Caminho para **sem prorrogação** — **`7`** → **`100`** (fim ao fim dos 90′+acréscimos). Esta leitura apoia o produto (PRD 4.6.1) ao **antecipar** prorrogação; qualquer automatismo deve tolerar payloads atrasados ou fora de ordem.
+
+Referência §4.6 (jobs): a sincronização quota‑aware (**§6.2.5**) não altera estas semânticas; apenas governa **quando** refrescar cada partida.
+
+#### 6.2.5 Sincronização quota‑aware com o provedor
+
+Objetivo: respeitar **limites económicos e operacionais** do fornecedor (pedidos REST diários/contratuais) mantendo resultado **correto** para placar oficial e pontuação (PRD 4.6–4.8). Os **intervalos numericamente concretos** ficam em **configuração** (`appsettings` / secrets), não neste texto.
+
+**Separação de responsabilidades**
+
+- **Somente o backend (.NET)** invoca HTTP ao **SportsAPI Pro** (ou futuro provedor). Clientes (Blazor, MAUI, etc.) consumem apenas a **API BigBall** (JWT), alinhado a §§4.5–4.6 e PRD §9.
+
+**Custo atual por refresh “completo” (implementação típica do adapter)**
+
+- Até **três GETs HTTP** por ciclo de leitura de uma partida: **`GET …/api/match/{id}`**, opcionalmente **`GET …/scores`** e **`GET …/penalties`**. **Orçamento diário deve contabilizar chamadas HTTP**, não só “número de jogos tocados”.
+- **Política de redução (direção de desenho):** obter sempre o recurso **`/api/match/{id}`** primeiro; chamar **`/scores`** e **`/penalties`** **apenas quando** o JSON principal não for suficiente para o snapshot (por exemplo quando `normaltime` já satisfaz TR e **`/penalties`** só é necessário perto de **`50`/`120`** ou quando o mapper assinalar lacuna). Documentar decisões equivalentes quando o código existir.
+
+**Janelas temporais**
+
+- **Não** gastar quota a fazer polling de partidas **distantes** no tempo; concentrar pedidos na **janela útil** (ex.: **X minutos antes** do pontapé inicial até estado **terminal** + **margem curta** para reconciliação tardia do provedor).
+
+**Cadência dinâmica por fase (valores apenas exemplificativos)**
+
+- Intervalos diferentes por **categoria**: pré‑jogo / ao vivo no TR / intervalos e prorrogação (`31`, `40`, `41`) / pênaltis (`50`, `120`) / pós‑jogo.
+- **`NotStarted`**: pouco frequente.
+- **`FirstHalf` / `SecondHalf`**: moderado; opcionalmente **apertar** perto do fim do regulamento.
+- **Prorrogação e pênaltis** (códigos **`31`/`40`/`41`/`50`/`120` conforme caso): maior frequência até estado terminal.
+- **Estados finais** (**`60`–`120`** conforme tabela §6.2.1): **retroceder** intervalo ou **parar** refreshes quando o resultado já for estável na base.
+
+**Orçamento diário**
+
+- Limite **`DailyRequestBudget`** (ou nome equivalente) **configurável**. Quando o consumo **aproximar o teto**, o sistema deve **alongar intervalos**, **adiar ou saltar** atualizações **não críticas**, e **registar** em logs ou métricas (alertas operacionais).
+
+```mermaid
+flowchart TD
+  subgraph provider [SportsAPI Pro]
+    SAP[HTTP GETs match scores penalties]
+  end
+  subgraph api [BigBall API]
+    Sync[MatchProviderSync worker]
+    DB[(Postgres Match)]
+  end
+  Sync --> SAP
+  Sync --> DB
+  Client[Blazor WASM] -->|REST JWT| api
+```
+
+Relação explícita: esta secção detalha o que §**4.6** resume como opções de **Hosted Service** / worker agendado.
 
 ---
 

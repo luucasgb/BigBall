@@ -1,7 +1,7 @@
 # BigBall — Product Requirements Document (PRD)
 
-**Versão:** 1.3  
-**Data:** 23 de abril de 2026  
+**Versão:** 1.4  
+**Data:** 28 de abril de 2026  
 **Status:** MVP + roadmap pós-MVP
 
 **Engenharia:** decisões de stack, integrações e detalhes de implementação estão em [**TechSpec.md**](./TechSpec.md) (este PRD permanece focado em produto e regras de negócio).
@@ -127,6 +127,12 @@ Cada item inclui **descrição** e **critérios de aceite** resumidos.
 
 - Partida encerrada mostra placar final e não aceita novos palpites.
 - Dados de resultado refletem a **fonte vigente** da partida: **se o provedor de dados enviar ou atualizar o resultado**, esse valor **prevalece** sobre qualquer valor manual anterior (4.11); rastreabilidade mínima (origem: provedor vs. manual, quem alterou manualmente e quando).
+
+#### 4.6.1 Estado da partida no provedor (visão produto)
+
+- **Faixas 1–5** da pontuação (secção **4.8**) referem-se **apenas ao tempo regulamentar (TR)**. O **+3** de bônus por pênaltis só se aplica quando houver uma **disputa real de pênaltis** (critérios em 4.8).
+- O **provedor de dados** expõe **códigos de estado numéricos** (`status.code` ou equivalente, conforme o contrato da API — ver **TechSpec §6.2.1**) para lógica programática. A separação entre **TR**, **prorrogação** e **disputa de pênaltis** deve ser derivada **sem ambiguidade** dos campos mapeados; o detalhe normativo está no **TechSpec** (§6.2.1 e **§6.2.4**).
+- Para **antecipar entrada em prorrogação**, uma sequência útil em atualizações sucessivas (por exemplo sob consultas periódicas) é **segundo tempo → intervalo/halftime antes da prorrogação → início da prorrogação**; já o **fim sem prorrogação** segue o caminho **segundo tempo → fim ao fim do TR**. Transições de códigos e semântica de polling estão no **TechSpec §6.2.4** e §6.2.5.
 
 ### 4.7 Palpites
 
@@ -327,6 +333,7 @@ flowchart LR
 | Segurança       | HTTPS; credenciais geridas pelo provedor de auth (p.ex. Supabase) com boas práticas equivalentes a hashing forte; rate limit em login; validação de entrada (detalhes no TechSpec). |
 | Privacidade     | LGPD/GDPR-ready: base legal; exportação/exclusão de conta (mínimo no roadmap: canal de solicitação).                                                                                |
 | Performance     | Listagens principais com tempo de resposta adequado em rede móvel típica (alvo orientativo: ordem de poucos segundos); cache do calendário quando aplicável.                        |
+| Provedor de dados | Usar o **mínimo** de chamadas HTTP ao provedor **compatível** com resultado oficial correto e com o cálculo de pontuação (4.6–4.8). Orçamentos, janelas temporais e cadência dinâmica são **exclusivamente de engenharia** — ver **TechSpec** (jobs §4.6, sincronização **quota-aware**, §6.2.5). |
 | Disponibilidade | Na janela da Copa, meta de uptime elevada; comunicação de incidentes (status page ou equivalente).                                                                                  |
 | Acessibilidade  | Web: práticas WCAG de forma progressiva no MVP (contraste, labels, foco).                                                                                                           |
 

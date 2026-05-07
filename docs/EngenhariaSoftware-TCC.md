@@ -1,6 +1,5 @@
 # Engenharia de software aplicada ao projeto BigBall
 
-**Tipo de documento:** artefato acadêmico complementar ao Trabalho de Conclusão de Curso (TCC)  
 **Base normativa:** [PRD.md](./PRD.md) (produto e regras de negócio), [TechSpec.md](./TechSpec.md) (stack, integrações e decisões de implementação)  
 **Versão:** 1.0  
 **Data:** 7 de maio de 2026

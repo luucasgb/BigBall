@@ -1,0 +1,56 @@
+@* 4-column KPI display shown in profile hero *@
+<div class="profile-kpis">
+    @foreach (var kpi in Items)
+    {
+        <div class="profile-kpi-item">
+            <div class="profile-kpi-label">@kpi.Label</div>
+            <div class="profile-kpi-value" style="color: @(kpi.IsHighlight ? "var(--brand-strong)" : "var(--fg)");">@kpi.Value</div>
+            <div class="profile-kpi-sub">@kpi.Subtitle</div>
+        </div>
+    }
+</div>
+
+@code {
+    public record KpiItem(string Label, string Value, string Subtitle, bool IsHighlight = false);
+
+    [Parameter] public IReadOnlyList<KpiItem> Items { get; set; } = [];
+}
+
+<style>
+    .profile-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 28px;
+        padding-left: 24px;
+        border-left: 1px solid var(--line);
+        min-width: 110px;
+    }
+
+    .profile-kpi-item {
+        min-width: 110px;
+    }
+
+    .profile-kpi-label {
+        font-size: 10px;
+        color: var(--fg-3);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .profile-kpi-value {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 38px;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        margin-top: 6px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .profile-kpi-sub {
+        font-size: 11px;
+        color: var(--fg-3);
+        margin-top: 2px;
+    }
+</style>

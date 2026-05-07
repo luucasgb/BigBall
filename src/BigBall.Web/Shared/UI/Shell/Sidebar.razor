@@ -1,0 +1,98 @@
+@* Fixed left-nav sidebar shared across all desktop screens. *@
+@using BigBall.Client.Core.Abstractions
+@using BigBall.Web.Shared.UI.Admin
+@inject IUserProfileStore UserProfileStore
+@implements IDisposable
+
+<SidebarFrame>
+    <div class="bb-logo">
+        <div class="bb-logo-mark">
+            <Icon Path="@IconPaths.Trophy" Size="20" />
+        </div>
+        <div class="bb-logo-text">BigBall</div>
+    </div>
+
+    <SidebarNavSection>Bolões</SidebarNavSection>
+    <SidebarNavItem IconPath="@IconPaths.Home"
+                    Label="Início"
+                    Href="/"
+                    IsActive="@(Active == "dashboard")" />
+    <SidebarNavItem IconPath="@IconPaths.Calendar"
+                    Label="Calendário"
+                    Href="/calendar"
+                    IsActive="@(Active == "calendar")" />
+    <SidebarNavItem IconPath="@IconPaths.Whistle"
+                    Label="Palpitar"
+                    Href="/predict"
+                    IsActive="@(Active == "predict")" />
+    <SidebarNavItem IconPath="@IconPaths.Globe"
+                    Label="Descobrir"
+                    Title="Em breve" />
+
+    <SidebarNavSection>Conta</SidebarNavSection>
+    <SidebarNavItem IconPath="@IconPaths.User"
+                    Label="Perfil"
+                    Href="/profile"
+                    IsActive="@(Active == "profile")" />
+
+#if DEBUG
+    <SidebarNavSection>Admin</SidebarNavSection>
+    <WorldCup2026SportsApiProbeButton />
+#endif
+
+    <SidebarUserFooter Name="@ResolvedUserName" Email="@ResolvedUserEmail" AvatarUrl="@ResolvedAvatarUrl" />
+</SidebarFrame>
+
+@code {
+    [Parameter] public string Active { get; set; } = string.Empty;
+    [Parameter] public string UserName { get; set; } = string.Empty;
+    [Parameter] public string UserEmail { get; set; } = string.Empty;
+
+    private string ResolvedUserName { get; set; } = string.Empty;
+    private string ResolvedUserEmail { get; set; } = string.Empty;
+    private string? ResolvedAvatarUrl { get; set; }
+
+    protected override void OnInitialized()
+    {
+        UserProfileStore.SnapshotChanged += OnSnapshotChanged;
+        ApplyFromStore();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await UserProfileStore.EnsureHydratedFromStorageAsync();
+        ApplyFromStore();
+        StateHasChanged();
+    }
+
+    private void OnSnapshotChanged()
+    {
+        ApplyFromStore();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ApplyFromStore()
+    {
+        if (UserProfileStore.Snapshot is { } profile)
+        {
+            ResolvedUserName = string.IsNullOrWhiteSpace(profile.DisplayName) ? UserName : profile.DisplayName;
+            ResolvedUserEmail = string.IsNullOrWhiteSpace(profile.Email) ? UserEmail : profile.Email;
+            ResolvedAvatarUrl = string.IsNullOrWhiteSpace(profile.AvatarUrl) ? null : profile.AvatarUrl;
+            return;
+        }
+
+        ResolvedUserName = UserName;
+        ResolvedUserEmail = UserEmail;
+        ResolvedAvatarUrl = null;
+    }
+
+    public void Dispose()
+    {
+        UserProfileStore.SnapshotChanged -= OnSnapshotChanged;
+    }
+}

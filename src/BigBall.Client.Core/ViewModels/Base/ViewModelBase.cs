@@ -17,7 +17,7 @@ public abstract partial class ViewModelBase : ObservableObject
         ErrorMessage = null;
         try
         {
-            await work(ct).ConfigureAwait(false);
+            await work(ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

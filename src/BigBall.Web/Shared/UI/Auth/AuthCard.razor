@@ -1,0 +1,52 @@
+@* Auth card wrapper with logo and title *@
+<div class="bb-auth-card">
+    <div class="auth-card-header">
+        <div class="auth-card-logo">
+            <Icon Path="@IconPaths.Trophy" Size="24" />
+        </div>
+        <div class="auth-card-title">BigBall</div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <p class="auth-card-subtitle">@Subtitle</p>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string Subtitle { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
+<style>
+    .auth-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .auth-card-logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: var(--brand-strong);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--brand-ink);
+    }
+
+    .auth-card-title {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
+    .auth-card-subtitle {
+        color: var(--fg-2);
+        font-size: 14px;
+        margin: 0 0 20px 0;
+    }
+</style>

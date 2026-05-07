@@ -1,0 +1,378 @@
+@using System.Globalization
+@implements IDisposable
+@inject ICreatePoolDialogService Dialog
+@inject IPoolsApi PoolsApi
+@inject NavigationManager Nav
+@inject IJSRuntime Js
+
+@if (Dialog.IsOpen)
+{
+    <div class="bb-modal-backdrop" @onclick="OnBackdrop" @onkeydown="OnKeyDown" tabindex="-1">
+        <div class="bb-modal-panel" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-labelledby="bb-create-pool-title">
+            <div class="bb-modal-header">
+                <h2 class="bb-modal-title" id="bb-create-pool-title">@(_step == Step.Form ? "Novo bolão" : "Bolão criado")</h2>
+                <button type="button" class="bb-modal-close bb-topbar-btn" @onclick="Close" aria-label="Fechar">×</button>
+            </div>
+
+            @if (_step == Step.Form)
+            {
+                <div class="bb-create-pool-form">
+                    <div class="bb-vis" role="group" aria-label="Visibilidade do bolão">
+                        <div class="bb-vis-label">Visibilidade</div>
+                        <div class="bb-vis-track">
+                            <div class="bb-vis-pill @(_isPrivate ? "private" : "public")"></div>
+                            <button type="button" class="bb-vis-btn @(!_isPrivate ? "active" : null)" @onclick="() => _isPrivate = false">Público</button>
+                            <button type="button" class="bb-vis-btn @(_isPrivate ? "active" : null)" @onclick="() => _isPrivate = true">Privado</button>
+                        </div>
+                    </div>
+
+                    <div class="bb-hint-anim @(_isPrivate ? "is-private" : "is-public")">
+                        <p class="bb-hint-p">
+                            @if (_isPrivate)
+                            {
+                                <text>Bolão privado não aparece na lista pública. Um <strong>código de convite</strong> único será gerado para você compartilhar.</text>
+                            }
+                            else
+                            {
+                                <text>Bolão <strong>público</strong> pode ser encontrado na descoberta; nome e descrição ficam visíveis para quem procura.</text>
+                            }
+                        </p>
+                    </div>
+
+                    <label class="bb-field">
+                        <span class="bb-field-l">Nome</span>
+                        <input class="bb-input" maxlength="140" @bind="_name" @bind:event="oninput" />
+                    </label>
+                    <label class="bb-field">
+                        <span class="bb-field-l">Descrição <span class="opt">(opcional)</span></span>
+                        <textarea class="bb-input bb-textarea" rows="2" maxlength="1000" @bind="_description" @bind:event="oninput"></textarea>
+                    </label>
+                    <label class="bb-field">
+                        <span class="bb-field-l">Premiação</span>
+                        <input class="bb-input" maxlength="300" @bind="_prize" @bind:event="oninput" />
+                    </label>
+                    <label class="bb-field">
+                        <span class="bb-field-l">Custo de entrada <span class="opt">(opcional)</span></span>
+                        <input class="bb-input" maxlength="120" @bind="_entryCost" @bind:event="oninput" placeholder="Ex.: R$ 20 (combinado fora do app)" />
+                    </label>
+
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <div class="bb-modal-err" role="alert">@_error</div>
+                    }
+
+                    <div class="bb-modal-actions">
+                        <button type="button" class="bb-btn bb-btn-secondary" disabled="@_busy" @onclick="Close">Cancelar</button>
+                        <button type="button" class="bb-btn bb-btn-primary" disabled="@_busy" @onclick="Submit">
+                            @if (_busy)
+                            {
+                                <text>Salvando…</text>
+                            }
+                            else
+                            {
+                                <text>Criar bolão</text>
+                            }
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="bb-create-pool-success">
+                    <p class="bb-succ-msg">Seu bolão <strong>privado</strong> está pronto. Compartilhe o código de convite:</p>
+                    <div class="bb-invite-row">
+                        <code class="bb-invite-code" id="bb-pool-invite">@_createdInvite</code>
+                        <button type="button" class="bb-btn bb-btn-secondary" @onclick="CopyInvite">Copiar</button>
+                    </div>
+                    <button type="button" class="bb-btn bb-btn-primary bb-succ-cta" @onclick="GoToPool">Ir para o bolão</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool _wasOpen;
+    private bool _isPrivate;
+    private string _name = "";
+    private string? _description;
+    private string _prize = "";
+    private string? _entryCost;
+    private string? _error;
+    private bool _busy;
+    private Step _step = Step.Form;
+    private string? _createdInvite;
+    private Guid _createdPoolId;
+    private bool _subscribed;
+
+    private enum Step { Form, Success }
+
+    protected override void OnInitialized()
+    {
+        Subscribe();
+    }
+
+    public void Dispose() => Unsubscribe();
+
+    private void Subscribe()
+    {
+        if (_subscribed) return;
+        Dialog.StateChanged += OnDialogChanged;
+        _subscribed = true;
+    }
+
+    private void Unsubscribe()
+    {
+        if (!_subscribed) return;
+        Dialog.StateChanged -= OnDialogChanged;
+        _subscribed = false;
+    }
+
+    private void OnDialogChanged()
+    {
+        if (Dialog.IsOpen && !_wasOpen)
+        {
+            ResetForm();
+        }
+        _wasOpen = Dialog.IsOpen;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ResetForm()
+    {
+        _isPrivate = false;
+        _name = "";
+        _description = null;
+        _prize = "";
+        _entryCost = null;
+        _error = null;
+        _busy = false;
+        _step = Step.Form;
+        _createdInvite = null;
+    }
+
+    private void Close() => Dialog.Close();
+
+    private void OnBackdrop() => Close();
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            Close();
+        }
+    }
+
+    private async Task Submit()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            _error = "Informe o nome do bolão.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_prize))
+        {
+            _error = "Informe a premiação.";
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var req = new CreatePoolRequest(
+                _name.Trim(),
+                string.IsNullOrWhiteSpace(_description) ? null : _description!.Trim(),
+                _isPrivate ? "Private" : "Public",
+                _prize.Trim(),
+                string.IsNullOrWhiteSpace(_entryCost) ? null : _entryCost!.Trim());
+            var res = await PoolsApi.CreatePoolAsync(req);
+            if (!string.IsNullOrEmpty(res.InviteCode))
+            {
+                _createdPoolId = res.PoolId;
+                _createdInvite = res.InviteCode;
+                _step = Step.Success;
+            }
+            else
+            {
+                Dialog.Close();
+                Nav.NavigateTo($"/pools/{res.PoolId.ToString("D", CultureInfo.InvariantCulture)}");
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void GoToPool()
+    {
+        Dialog.Close();
+        Nav.NavigateTo($"/pools/{_createdPoolId.ToString("D", CultureInfo.InvariantCulture)}");
+    }
+
+    private async Task CopyInvite()
+    {
+        if (string.IsNullOrEmpty(_createdInvite)) return;
+        try
+        {
+            await Js.InvokeVoidAsync("bigBallCopyToClipboard", _createdInvite);
+        }
+        catch
+        {
+            // Clipboard may be denied; ignore
+        }
+    }
+}
+
+<style>
+    .bb-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: color-mix(in oklab, var(--bg-2) 35%, rgba(0, 0, 0, 0.55));
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    .bb-modal-panel {
+        width: 100%;
+        max-width: 420px;
+        max-height: min(90vh, 640px);
+        overflow-y: auto;
+        background: var(--bg-elev);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+    }
+    .bb-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 20px 0;
+        gap: 12px;
+    }
+    .bb-modal-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+    .bb-modal-close {
+        min-width: 36px;
+        font-size: 1.4rem;
+        line-height: 1;
+    }
+    .bb-create-pool-form {
+        padding: 16px 20px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .bb-vis { display: flex; flex-direction: column; gap: 8px; }
+    .bb-vis-label { font-size: 12px; font-weight: 600; color: var(--fg-2); text-transform: uppercase; letter-spacing: 0.04em; }
+    .bb-vis-track {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        padding: 3px;
+        background: var(--chip-bg);
+        border: 1px solid var(--chip-border);
+        border-radius: 10px;
+    }
+    .bb-vis-pill {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: calc(50% - 3px);
+        height: calc(100% - 6px);
+        background: var(--bg-elev-2);
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+    }
+    .bb-vis-pill.private {
+        transform: translateX(calc(100% + 3px));
+    }
+    .bb-vis-btn {
+        position: relative;
+        z-index: 1;
+        height: 36px;
+        border: 0;
+        background: transparent;
+        color: var(--fg-2);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    .bb-vis-btn.active { color: var(--fg); }
+    .bb-hint-anim {
+        overflow: hidden;
+        max-height: 3.2rem;
+        opacity: 1;
+        transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    }
+    .bb-hint-anim.is-private { max-height: 5.5rem; }
+    .bb-hint-p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--fg-2);
+    }
+    .bb-field { display: flex; flex-direction: column; gap: 6px; }
+    .bb-field-l { font-size: 12px; font-weight: 600; color: var(--fg-2); }
+    .bb-field-l .opt { font-weight: 500; color: var(--fg-3); }
+    .bb-input {
+        width: 100%;
+        min-height: 40px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        color: var(--fg);
+        font: inherit;
+    }
+    .bb-textarea { min-height: 64px; resize: vertical; }
+    .bb-modal-err {
+        font-size: 13px;
+        color: var(--danger);
+    }
+    .bb-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 4px;
+    }
+    .bb-create-pool-success {
+        padding: 0 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .bb-succ-msg { margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg-2); }
+    .bb-invite-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .bb-invite-code {
+        flex: 1 1 140px;
+        min-width: 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--chip-bg);
+        border: 1px solid var(--chip-border);
+        font-family: var(--font-mono);
+        font-size: 16px;
+        font-weight: 600;
+    }
+    .bb-succ-cta { width: 100%; }
+</style>

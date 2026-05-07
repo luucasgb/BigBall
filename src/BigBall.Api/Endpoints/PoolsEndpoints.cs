@@ -1,8 +1,11 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using BigBall.Api.Data;
 using BigBall.Domain.Entities;
+using BigBall.Domain.Enums;
 using BigBall.Domain.Scoring;
 using BigBall.Shared.Dtos;
+using Microsoft.EntityFrameworkCore;
 
 namespace BigBall.Api.Endpoints;
 
@@ -12,25 +15,113 @@ public static class PoolsEndpoints
     {
         var group = app.MapGroup("/api/pools").RequireAuthorization().WithTags("Pools");
 
-        group.MapGet("/mine", (ClaimsPrincipal user, InMemoryStore store, RankingService ranking) =>
+        group.MapPost("", async (CreatePoolRequest req, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
         {
             var userId = user.RequireUserId();
-            var myMemberships = store.MembershipsOf(userId).ToList();
+
+            var name = (req.Name ?? string.Empty).Trim();
+            var prize = (req.PrizeDescription ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(name))
+            {
+                return Results.BadRequest(new { error = "Nome é obrigatório." });
+            }
+            if (string.IsNullOrEmpty(prize))
+            {
+                return Results.BadRequest(new { error = "Premiação é obrigatória." });
+            }
+            if (name.Length > 140)
+            {
+                return Results.BadRequest(new { error = "Nome excede o tamanho máximo (140 caracteres)." });
+            }
+            var description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim();
+            if (description is { Length: > 1000 })
+            {
+                return Results.BadRequest(new { error = "Descrição excede o tamanho máximo (1000 caracteres)." });
+            }
+            if (prize.Length > 300)
+            {
+                return Results.BadRequest(new { error = "Premiação excede o tamanho máximo (300 caracteres)." });
+            }
+            var entryCost = string.IsNullOrWhiteSpace(req.EntryCost) ? null : req.EntryCost.Trim();
+            if (entryCost is { Length: > 120 })
+            {
+                return Results.BadRequest(new { error = "Custo de entrada excede o tamanho máximo (120 caracteres)." });
+            }
+
+            if (!Enum.TryParse<PoolVisibility>(req.Visibility?.Trim(), ignoreCase: true, out var visibility))
+            {
+                return Results.BadRequest(new { error = "Visibilidade inválida. Use Public ou Private." });
+            }
+
+            string? inviteCode = null;
+            if (visibility == PoolVisibility.Private)
+            {
+                const int maxAttempts = 32;
+                for (var attempt = 0; attempt < maxAttempts; attempt++)
+                {
+                    var code = GenerateInviteCode();
+                    var taken = await db.Pools.AnyAsync(p => p.InviteCode == code, ct);
+                    if (!taken)
+                    {
+                        inviteCode = code;
+                        break;
+                    }
+                }
+                if (inviteCode is null)
+                {
+                    return Results.Problem("Não foi possível gerar um código de convite único.");
+                }
+            }
+
+            var poolId = Guid.NewGuid();
+            var now = DateTime.UtcNow;
+            db.Pools.Add(new Pool
+            {
+                Id = poolId,
+                Name = name,
+                Description = description,
+                Visibility = visibility,
+                InviteCode = inviteCode,
+                AdminUserId = userId,
+                PrizeDescription = prize,
+                EntryCost = entryCost,
+                CreatedUtc = now
+            });
+            db.PoolMemberships.Add(new PoolMembership
+            {
+                Id = Guid.NewGuid(),
+                PoolId = poolId,
+                UserId = userId,
+                Role = MembershipRole.Admin,
+                JoinedUtc = now
+            });
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new CreatePoolResponse(poolId, inviteCode));
+        })
+        .WithName("CreatePool");
+
+        group.MapGet("/mine", async (ClaimsPrincipal user, BigBallDbContext db, RankingService ranking, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+            var myMemberships = await db.PoolMemberships.Where(m => m.UserId == userId).ToListAsync(ct);
             var now = DateTime.UtcNow;
 
-            var result = myMemberships.Select(m =>
+            var result = new List<MyPoolDto>();
+            foreach (var m in myMemberships)
             {
-                var pool = store.Pools[m.PoolId];
-                var rows = ranking.BuildRanking(pool.Id, userId);
+                var pool = await db.Pools.FirstAsync(p => p.Id == m.PoolId, ct);
+                var rows = await ranking.BuildRankingAsync(pool.Id, userId, ct);
                 var myRow = rows.FirstOrDefault(r => r.IsMe);
                 var leaderRow = rows.FirstOrDefault();
-                var memberCount = store.MembersOf(pool.Id).Count();
+                var memberCount = await db.PoolMemberships.CountAsync(x => x.PoolId == pool.Id, ct);
 
-                var nextMatch = FindNextMatch(store, now);
+                var nextMatch = await FindNextMatchAsync(db, now, ct);
                 NextMatchDto? nextDto = null;
                 if (nextMatch is not null)
                 {
-                    var myPred = store.FindPrediction(userId, pool.Id, nextMatch.Id);
+                    var myPred = await db.Predictions.FirstOrDefaultAsync(
+                        p => p.UserId == userId && p.PoolId == pool.Id && p.MatchId == nextMatch.Id, ct);
                     nextDto = new NextMatchDto(
                         nextMatch.Id,
                         nextMatch.HomeCode,
@@ -40,7 +131,7 @@ public static class PoolsEndpoints
                         myPred is null ? null : new ScoreDto(myPred.Home, myPred.Away));
                 }
 
-                return new MyPoolDto(
+                result.Add(new MyPoolDto(
                     pool.Id,
                     pool.Name,
                     memberCount,
@@ -49,28 +140,74 @@ public static class PoolsEndpoints
                     leaderRow is null
                         ? new LeaderDto(Guid.Empty, "—", 0)
                         : new LeaderDto(leaderRow.UserId, leaderRow.Name, leaderRow.Points),
-                    nextDto);
-            }).ToList();
+                    nextDto));
+            }
 
             return Results.Ok(result);
         })
         .WithName("GetMyPools");
 
-        group.MapGet("/{poolId:guid}", (Guid poolId, ClaimsPrincipal user, InMemoryStore store, RankingService ranking) =>
+        group.MapPost("/join", async (JoinPoolRequest req, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
         {
             var userId = user.RequireUserId();
-            if (!store.Pools.TryGetValue(poolId, out var pool))
+            var raw = (req.InviteCode ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(raw))
+            {
+                return Results.BadRequest(new { error = "Código de convite é obrigatório." });
+            }
+            if (raw.Length > 32)
+            {
+                return Results.BadRequest(new { error = "Código de convite inválido." });
+            }
+
+            var normalized = raw.ToUpperInvariant();
+            var pool = await db.Pools.FirstOrDefaultAsync(
+                p => p.InviteCode == normalized
+                     && p.Visibility == PoolVisibility.Private
+                     && p.InviteCode != null,
+                ct);
+            if (pool is null)
+            {
+                return Results.NotFound(new { error = "Código de convite inválido." });
+            }
+
+            var alreadyMember = await db.PoolMemberships.AnyAsync(
+                m => m.PoolId == pool.Id && m.UserId == userId, ct);
+            if (alreadyMember)
+            {
+                return Results.Conflict(new { error = "Você já participa deste bolão." });
+            }
+
+            var now = DateTime.UtcNow;
+            db.PoolMemberships.Add(new PoolMembership
+            {
+                Id = Guid.NewGuid(),
+                PoolId = pool.Id,
+                UserId = userId,
+                Role = MembershipRole.Member,
+                JoinedUtc = now
+            });
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new JoinPoolResponse(pool.Id, pool.Name));
+        })
+        .WithName("JoinPoolByInvite");
+
+        group.MapGet("/{poolId:guid}", async (Guid poolId, ClaimsPrincipal user, BigBallDbContext db, RankingService ranking, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+            var pool = await db.Pools.FirstOrDefaultAsync(p => p.Id == poolId, ct);
+            if (pool is null)
             {
                 return Results.NotFound(new { error = "Bolão não encontrado." });
             }
 
-            var isMember = store.MembersOf(poolId).Any(m => m.UserId == userId);
+            var isMember = await db.PoolMemberships.AnyAsync(m => m.PoolId == poolId && m.UserId == userId, ct);
             if (!isMember)
             {
                 return Results.Forbid();
             }
 
-            var rows = ranking.BuildRanking(poolId, userId);
+            var rows = await ranking.BuildRankingAsync(poolId, userId, ct);
             var myRow = rows.FirstOrDefault(r => r.IsMe);
             var leaderRow = rows.FirstOrDefault();
 
@@ -94,11 +231,26 @@ public static class PoolsEndpoints
         return app;
     }
 
-    private static Match? FindNextMatch(InMemoryStore store, DateTime now)
+    /// <summary>Uppercase alphanumeric without ambiguous I, O, 0, 1.</summary>
+    private static string GenerateInviteCode()
     {
-        return store.Matches.Values
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var bytes = new byte[8];
+        RandomNumberGenerator.Fill(bytes);
+        return string.Create(8, bytes, static (span, b) =>
+        {
+            for (var i = 0; i < span.Length; i++)
+            {
+                span[i] = chars[b[i] % chars.Length];
+            }
+        });
+    }
+
+    private static async Task<BigBall.Domain.Entities.Match?> FindNextMatchAsync(BigBallDbContext db, DateTime now, CancellationToken ct)
+    {
+        return await db.Matches
             .Where(m => m.KickoffUtc > now)
             .OrderBy(m => m.KickoffUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(ct);
     }
 }

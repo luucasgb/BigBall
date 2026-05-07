@@ -1,58 +1,73 @@
 @page "/login"
 @inject LoginViewModel VM
+@inject NavigationManager Nav
 @implements IDisposable
 
-<Phone>
-    <div class="bb-scroll" style="padding:28px 24px;display:flex;flex-direction:column;gap:22px;">
-        <div style="display:flex;flex-direction:column;gap:6px;margin-top:20px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:44px;height:44px;border-radius:14px;background:var(--brand-strong);display:flex;align-items:center;justify-content:center;">
-                    <Icon Path="@IconPaths.Trophy" Size="24" Style="color:var(--brand-ink);" />
-                </div>
-                <div style="font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-0.02em;">BigBall</div>
-            </div>
-            <p style="color:var(--fg-2);font-size:13px;margin:0;">Entre com seu e-mail para acompanhar seus bolões.</p>
-        </div>
+<div class="bb-auth-page theme-dark">
+    <AuthCard Subtitle="Entre com seu e-mail para acompanhar seus bolões.">
+        <AuthForm @bind-Email="VM.Email" @bind-Password="VM.Password" Disabled="@VM.IsBusy" />
 
-        <div style="display:flex;flex-direction:column;gap:12px;">
-            <div>
-                <div class="bb-field-label">E-mail</div>
-                <input class="bb-input" type="email" placeholder="voce@email.com"
-                       @bind="VM.Email" @bind:event="oninput" />
-            </div>
-            <div>
-                <div class="bb-field-label">Senha</div>
-                <input class="bb-input" type="password" placeholder="••••••••"
-                       @bind="VM.Password" @bind:event="oninput" />
-            </div>
-        </div>
+        <ErrorAlert Message="@VM.ErrorMessage" />
 
-        @if (!string.IsNullOrEmpty(VM.ErrorMessage))
-        {
-            <div class="bb-error">@VM.ErrorMessage</div>
-        }
+        <AuthButton Label="Entrar"
+                    BusyLabel="Entrando…"
+                    IsBusy="@VM.IsBusy"
+                    Disabled="@(!VM.LoginCommand.CanExecute(null))"
+                    OnClick="ExecuteLogin" />
 
-        <button class="bb-btn bb-btn-primary" type="button"
-                disabled="@(VM.IsBusy || !VM.LoginCommand.CanExecute(null))"
-                @onclick="ExecuteLogin">
-            @(VM.IsBusy ? "Entrando…" : "Entrar")
+        <button class="bb-btn bb-btn-outline auth-google-button"
+                type="button"
+                disabled="@VM.IsBusy"
+                @onclick="StartGoogleLogin">
+            Entrar com Google
         </button>
 
-        <div style="text-align:center;color:var(--fg-3);font-size:12px;">
-            Stub de autenticação — qualquer e-mail + senha não-vazios funcionam.
-        </div>
-    </div>
-</Phone>
+        <p class="auth-switch">
+            <a class="auth-switch-link" href="/register">Criar conta</a>
+        </p>
+
+        <AuthFooter>Autenticação via Supabase (e-mail/senha + Google OAuth).</AuthFooter>
+    </AuthCard>
+</div>
 
 @code {
     protected override void OnInitialized() => VM.PropertyChanged += OnVmChanged;
 
     private void OnVmChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
 
-    private async Task ExecuteLogin()
+    private async Task ExecuteLogin() => await VM.LoginCommand.ExecuteAsync(null);
+    private async Task StartGoogleLogin()
     {
-        await VM.LoginCommand.ExecuteAsync(null);
+        var callback = $"{Nav.BaseUri.TrimEnd('/')}/auth/callback";
+        await VM.StartGoogleLoginCommand.ExecuteAsync(callback);
+        if (!string.IsNullOrWhiteSpace(VM.GoogleOAuthUrl))
+        {
+            Nav.NavigateTo(VM.GoogleOAuthUrl, forceLoad: true);
+        }
     }
 
     public void Dispose() => VM.PropertyChanged -= OnVmChanged;
 }
+
+<style>
+    .auth-google-button {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .auth-switch {
+        text-align: center;
+        margin: 0;
+        font-size: 14px;
+    }
+
+    .auth-switch-link {
+        color: var(--brand-strong);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .auth-switch-link:hover {
+        text-decoration: underline;
+    }
+</style>

@@ -1,0 +1,63 @@
+@page "/auth/callback"
+@inject BigBall.Client.Core.Abstractions.ITokenStore TokenStore
+@inject BigBall.Client.Core.Abstractions.IUserProfileStore UserProfileStore
+@inject BigBall.Client.Core.Abstractions.IAuthApi AuthApi
+@inject NavigationManager Nav
+
+<div class="bb-auth-page theme-dark">
+    <div class="bb-auth-card">
+        <p>Finalizando autenticação...</p>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        var fragment = new Uri(Nav.Uri).Fragment;
+        if (string.IsNullOrWhiteSpace(fragment))
+        {
+            Nav.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        var token = ParseFragmentValue(fragment, "access_token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Nav.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        await TokenStore.SetTokenAsync(token);
+        try
+        {
+            var profile = await AuthApi.GetMyProfileAsync();
+            await UserProfileStore.SetSnapshotAsync(profile);
+        }
+        catch
+        {
+            // Sidebar / profile page can recover via /me when snapshot is missing.
+        }
+
+        Nav.NavigateTo("/", replace: true);
+    }
+
+    private static string? ParseFragmentValue(string fragment, string key)
+    {
+        var trimmed = fragment.TrimStart('#');
+        foreach (var pair in trimmed.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length == 2 && string.Equals(parts[0], key, StringComparison.Ordinal))
+            {
+                return Uri.UnescapeDataString(parts[1]);
+            }
+        }
+
+        return null;
+    }
+}

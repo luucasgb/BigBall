@@ -1,0 +1,16 @@
+@* Match context for the predict flow; uses PageHeader so spacing matches other desktop pages. *@
+
+<PageHeader Title="@($"Palpite · {HomeCode} × {AwayCode}")"
+            Eyebrow="@Phase"
+            Subtitle="@($"{KickoffUtc.ToLocalTime():dd/MM HH:mm} · BRT")">
+    <Actions>
+        <PredictionLockCountdownChip KickoffUtc="@KickoffUtc" />
+    </Actions>
+</PageHeader>
+
+@code {
+    [Parameter] public string? Phase { get; set; }
+    [Parameter] public string HomeCode { get; set; } = "";
+    [Parameter] public string AwayCode { get; set; } = "";
+    [Parameter] public DateTime KickoffUtc { get; set; }
+}

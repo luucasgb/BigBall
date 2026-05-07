@@ -1,0 +1,16 @@
+@* Footer text for auth pages *@
+<div class="auth-footer">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
+<style>
+    .auth-footer {
+        text-align: center;
+        color: var(--fg-3);
+        font-size: 12px;
+    }
+</style>

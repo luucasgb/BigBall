@@ -1,0 +1,137 @@
+@* Card showing user's pools with rank and points *@
+<div class="bb-dcard">
+    <div class="bb-dcard-h">
+        <div class="bb-dcard-title">@Title</div>
+        @if (!string.IsNullOrEmpty(ViewAllLabel))
+        {
+            <span class="bb-dcard-link">@ViewAllLabel <Icon Path="@IconPaths.Chevron" Size="14" /></span>
+        }
+    </div>
+    <div class="pools-list">
+        @foreach (var pool in Items)
+        {
+            <div class="pools-item">
+                <div class="pools-item-trophy @(pool.Rank == 1 ? "pools-item-trophy-first" : "")" style="background:@(pool.Rank == 1 ? "color-mix(in oklab, var(--brand-strong) 22%, transparent)" : "var(--chip-bg)");color:@(pool.Rank == 1 ? "var(--brand-strong)" : "var(--fg-2)");">
+                    <Icon Path="@IconPaths.Trophy" Size="18" />
+                </div>
+                <div class="pools-item-info">
+                    <div class="pools-item-name-row">
+                        @pool.Name
+                        @if (pool.IsAdmin)
+                        {
+                            <span class="pools-item-admin-badge">ADMIN</span>
+                        }
+                    </div>
+                    <div class="pools-item-members">@(pool.MemberCount) membros</div>
+                </div>
+                <div class="pools-item-rank">
+                    <div class="pools-item-rank-label">posição</div>
+                    <div class="pools-item-rank-value @(pool.Rank == 1 ? "pools-item-rank-first" : "")">#@(pool.Rank)</div>
+                </div>
+                <div class="pools-item-points">
+                    <div class="pools-item-points-label">pontos</div>
+                    <div class="pools-item-points-value">@(pool.Points)</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    public record PoolItem(string Name, int MemberCount, bool IsAdmin, int Rank, int Points);
+
+    [Parameter] public string Title { get; set; } = "Meus bolões";
+    [Parameter] public string ViewAllLabel { get; set; } = "Ver todos";
+    [Parameter] public IReadOnlyList<PoolItem> Items { get; set; } = [];
+}
+
+<style>
+    .pools-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .pools-item {
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .pools-item-trophy {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .pools-item-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .pools-item-name-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .pools-item-admin-badge {
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: color-mix(in oklab, var(--brand-strong) 22%, transparent);
+        color: var(--brand-strong);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+    }
+
+    .pools-item-members {
+        font-size: 11px;
+        color: var(--fg-3);
+        margin-top: 2px;
+    }
+
+    .pools-item-rank {
+        text-align: right;
+    }
+
+    .pools-item-rank-label {
+        font-size: 11px;
+        color: var(--fg-3);
+    }
+
+    .pools-item-rank-value {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 20px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+
+    .pools-item-points {
+        text-align: right;
+        min-width: 60px;
+    }
+
+    .pools-item-points-label {
+        font-size: 11px;
+        color: var(--fg-3);
+    }
+
+    .pools-item-points-value {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 20px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+</style>

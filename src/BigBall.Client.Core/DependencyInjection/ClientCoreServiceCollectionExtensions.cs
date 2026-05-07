@@ -8,9 +8,9 @@ namespace BigBall.Client.Core.DependencyInjection;
 public static class ClientCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers API clients (Auth/Pools/Matches/Predictions) + the 4 ViewModels.
-    /// Consumers must additionally register <see cref="ITokenStore"/> and
-    /// <see cref="IAppNavigator"/> implementations for their platform.
+    /// Registers API clients (Auth/Pools/Matches/Predictions/Admin) + the 4 ViewModels.
+    /// Consumers must additionally register <see cref="ITokenStore"/>,
+    /// <see cref="IUserProfileStore"/>, and <see cref="IAppNavigator"/> implementations for their platform.
     /// </summary>
     public static IServiceCollection AddBigBallClientCore(
         this IServiceCollection services,
@@ -27,7 +27,11 @@ public static class ClientCoreServiceCollectionExtensions
         services.AddHttpClient<IPredictionsApi, PredictionsApiClient>(c => c.BaseAddress = apiBaseAddress)
                 .AddHttpMessageHandler<AuthMessageHandler>();
 
+        services.AddHttpClient<IAdminApi, AdminApiClient>(c => c.BaseAddress = apiBaseAddress)
+                .AddHttpMessageHandler<AuthMessageHandler>();
+
         services.AddTransient<LoginViewModel>();
+        services.AddTransient<RegisterViewModel>();
         services.AddTransient<HomeViewModel>();
         services.AddTransient<PoolDetailViewModel>();
         services.AddTransient<PredictViewModel>();

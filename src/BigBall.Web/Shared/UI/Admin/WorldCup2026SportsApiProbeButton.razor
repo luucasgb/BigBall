@@ -1,0 +1,83 @@
+@namespace BigBall.Web.Shared.UI.Admin
+@inject IAdminApi AdminApi
+
+<div class="wc-probe">
+    <button type="button"
+            class="wc-probe__btn"
+            disabled="@_busy"
+            @onclick="OnClickAsync">
+        @_buttonLabel
+    </button>
+    @if (!string.IsNullOrEmpty(_status))
+    {
+        <p class="wc-probe__status">@_status</p>
+    }
+</div>
+
+@code {
+    private const string ButtonIdle = "WC 2026 — SportsApi probe";
+
+    private string _buttonLabel = ButtonIdle;
+    private string? _status;
+    private bool _busy;
+
+    private async Task OnClickAsync()
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _status = null;
+        _buttonLabel = "Running…";
+
+        try
+        {
+            var dto = await AdminApi.ProbeWorldCup2026SportsApiAsync().ConfigureAwait(false);
+            _status = dto.Success
+                ? $"OK — {dto.TotalUniqueMatches} matches, {dto.RoundsQueried} rounds. Check API logs for JSON preview."
+                : (dto.Error ?? "Probe failed.");
+        }
+        catch (Exception ex)
+        {
+            _status = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+            _buttonLabel = ButtonIdle;
+        }
+    }
+}
+
+<style>
+    .wc-probe {
+        padding: 0 10px 12px;
+    }
+
+    .wc-probe__btn {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: color-mix(in oklab, var(--bg) 70%, var(--accent));
+        color: var(--fg);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .wc-probe__btn:disabled {
+        opacity: 0.55;
+        cursor: wait;
+    }
+
+    .wc-probe__status {
+        margin: 8px 0 0;
+        font-size: 11px;
+        line-height: 1.35;
+        color: var(--fg-2);
+    }
+</style>

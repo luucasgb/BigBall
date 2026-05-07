@@ -20,11 +20,34 @@ public sealed class AuthMessageHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var token = await _tokens.GetTokenAsync(cancellationToken).ConfigureAwait(false);
+        string? token = null;
+        if (ShouldAttachBearer(request))
+        {
+            token = await _tokens.GetTokenAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         if (!string.IsNullOrWhiteSpace(token))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
-        return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await _tokens.ClearAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return response;
+    }
+
+    /// <summary>
+    /// Anonymous auth endpoints must not receive a stale Bearer token — some hosts reject invalid JWTs before the route runs.
+    /// </summary>
+    private static bool ShouldAttachBearer(HttpRequestMessage request)
+    {
+        var path = request.RequestUri?.AbsolutePath.TrimEnd('/') ?? "";
+        return !string.Equals(path, "/api/auth/login", StringComparison.OrdinalIgnoreCase)
+               && !string.Equals(path, "/api/auth/google-url", StringComparison.OrdinalIgnoreCase);
     }
 }

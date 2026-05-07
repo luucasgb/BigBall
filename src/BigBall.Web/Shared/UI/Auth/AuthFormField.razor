@@ -1,0 +1,30 @@
+@* Single labeled text-like input (email, password, etc.) for auth forms *@
+<div class="auth-form-field">
+    <div class="bb-field-label">@Label</div>
+    <input class="bb-input"
+           type="@Type"
+           placeholder="@Placeholder"
+           value="@Value"
+           @oninput="OnInput"
+           disabled="@Disabled" />
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public string Placeholder { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private Task OnInput(ChangeEventArgs e) =>
+        ValueChanged.InvokeAsync(e.Value?.ToString() ?? "");
+}
+
+<style>
+    .auth-form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+</style>

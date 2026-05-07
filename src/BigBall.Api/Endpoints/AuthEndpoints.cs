@@ -1,56 +1,254 @@
+using System.Security.Claims;
+using System.Text.Json;
 using BigBall.Api.Auth;
 using BigBall.Api.Data;
-using BigBall.Domain.Entities;
 using BigBall.Shared.Dtos;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BigBall.Api.Endpoints;
 
-/// <summary>
-/// STUB — substituir por Supabase JWT conforme TechSpec §4.3.
-/// Qualquer email/senha não-vazio autentica. joao.pereira@gmail.com resolve para o usuário seedado.
-/// </summary>
 public static class AuthEndpoints
 {
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/auth").WithTags("Auth");
 
-        group.MapPost("/login", (LoginRequest req, InMemoryStore store, StubJwtIssuer issuer) =>
+        group.MapPost("/login", async (LoginRequest req, SupabasePasswordAuthClient supabase, BigBallDbContext db, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             {
                 return Results.BadRequest(new { error = "Email e senha são obrigatórios." });
             }
 
-            var profile = store.FindProfileByEmail(req.Email);
-            if (profile is null)
+            var auth = await supabase.SignInAsync(req.Email.Trim(), req.Password, ct);
+            if (auth is null)
             {
-                // Create an ad-hoc profile so any email "works" in the stub.
-                profile = new Profile
-                {
-                    Id = Guid.NewGuid(),
-                    Email = req.Email,
-                    DisplayName = DeriveDisplayName(req.Email)
-                };
-                store.Profiles.TryAdd(profile.Id, profile);
+                return Results.Unauthorized();
             }
 
-            var token = issuer.Issue(profile.Id, profile.Email, profile.DisplayName);
+            var profile = await UpsertProfileAsync(db, auth.User, ct);
             return Results.Ok(new LoginResponse(
-                token,
-                new ProfileDto(profile.Id, profile.DisplayName, null)));
+                auth.AccessToken,
+                new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate)));
         })
         .AllowAnonymous()
         .WithName("Login");
 
+        group.MapPost("/register", async (RegisterRequest req, SupabasePasswordAuthClient supabase, BigBallDbContext db, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
+            {
+                return Results.BadRequest(new { error = "Email e senha são obrigatórios." });
+            }
+
+            var displayName = string.IsNullOrWhiteSpace(req.DisplayName) ? null : req.DisplayName.Trim();
+            var redirect = string.IsNullOrWhiteSpace(req.EmailRedirectTo) ? null : req.EmailRedirectTo.Trim();
+
+            var result = await supabase.SignUpAsync(req.Email.Trim(), req.Password, displayName, redirect, ct);
+            if (result.ErrorMessage is not null)
+            {
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            if (result.Session is not null)
+            {
+                var profile = await UpsertProfileAsync(db, result.Session.User, ct);
+                var login = new LoginResponse(
+                    result.Session.AccessToken,
+                    new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate));
+                return Results.Ok(new RegisterResponse(login, RequiresEmailConfirmation: false));
+            }
+
+            if (result.UserPendingConfirmation is not null)
+            {
+                var email = result.UserPendingConfirmation.Email;
+                return Results.Ok(new RegisterResponse(
+                    Session: null,
+                    RequiresEmailConfirmation: true,
+                    PendingEmail: string.IsNullOrWhiteSpace(email) ? req.Email.Trim() : email));
+            }
+
+            return Results.BadRequest(new { error = "Não foi possível concluir o cadastro." });
+        })
+        .AllowAnonymous()
+        .WithName("Register");
+
+        group.MapGet("/google-url", (string redirectTo, IOptions<SupabaseAuthOptions> options) =>
+        {
+            if (string.IsNullOrWhiteSpace(redirectTo))
+            {
+                return Results.BadRequest(new { error = "redirectTo é obrigatório." });
+            }
+
+            var cfg = options.Value;
+            var encodedRedirect = Uri.EscapeDataString(redirectTo);
+            var url = $"{cfg.AuthIssuer}/authorize?provider=google&redirect_to={encodedRedirect}";
+            return Results.Ok(new OAuthRedirectUrlResponse(url));
+        })
+        .AllowAnonymous()
+        .WithName("GetGoogleOAuthUrl");
+
+        group.MapGet("/me", async (ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+            var email = ResolveJwtEmail(user) ?? string.Empty;
+            var displayFromJwt = ResolveJwtDisplayName(user);
+            var avatarFromJwt = ResolveJwtAvatarUrl(user);
+
+            var profile = await db.Profiles.FirstOrDefaultAsync(p => p.Id == userId, ct);
+            if (profile is null)
+            {
+                profile = new BigBall.Domain.Entities.Profile
+                {
+                    Id = userId,
+                    Email = email,
+                    DisplayName = displayFromJwt ?? DeriveDisplayName(email),
+                    CreateDate = DateTime.UtcNow
+                };
+                if (!string.IsNullOrWhiteSpace(avatarFromJwt))
+                {
+                    profile.AvatarUrl = avatarFromJwt;
+                }
+
+                db.Profiles.Add(profile);
+                await db.SaveChangesAsync(ct);
+            }
+            else
+            {
+                var changed = false;
+                if (!string.IsNullOrWhiteSpace(email) && !string.Equals(profile.Email, email, StringComparison.OrdinalIgnoreCase))
+                {
+                    profile.Email = email;
+                    changed = true;
+                }
+
+                if (!string.IsNullOrWhiteSpace(displayFromJwt) &&
+                    !string.Equals(profile.DisplayName, displayFromJwt, StringComparison.Ordinal))
+                {
+                    profile.DisplayName = displayFromJwt;
+                    changed = true;
+                }
+
+                if (!string.IsNullOrWhiteSpace(avatarFromJwt) &&
+                    !string.Equals(profile.AvatarUrl, avatarFromJwt, StringComparison.Ordinal))
+                {
+                    profile.AvatarUrl = avatarFromJwt;
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    await db.SaveChangesAsync(ct);
+                }
+            }
+
+            return Results.Ok(new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate));
+        })
+        .RequireAuthorization()
+        .WithName("GetMyProfile");
+
         return app;
+    }
+
+    private static async Task<BigBall.Domain.Entities.Profile> UpsertProfileAsync(
+        BigBallDbContext db,
+        SupabaseAuthUser user,
+        CancellationToken ct)
+    {
+        var existing = await db.Profiles.FirstOrDefaultAsync(p => p.Id == user.Id, ct);
+        var displayName = user.UserMetadata?.FullName
+                          ?? user.UserMetadata?.Name
+                          ?? DeriveDisplayName(user.Email);
+        if (existing is not null)
+        {
+            existing.DisplayName = displayName;
+            existing.Email = user.Email;
+            await db.SaveChangesAsync(ct);
+            return existing;
+        }
+
+        var profile = new BigBall.Domain.Entities.Profile
+        {
+            Id = user.Id,
+            Email = user.Email,
+            DisplayName = displayName,
+            CreateDate = DateTime.UtcNow
+        };
+        db.Profiles.Add(profile);
+        await db.SaveChangesAsync(ct);
+        return profile;
     }
 
     private static string DeriveDisplayName(string email)
     {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return "Usuário BigBall";
+        }
         var at = email.IndexOf('@');
         var local = at > 0 ? email[..at] : email;
         var parts = local.Split('.', StringSplitOptions.RemoveEmptyEntries);
         return string.Join(' ', parts.Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
+    }
+
+    /// <summary>
+    /// Supabase puts OAuth profile fields in a JSON claim <c>user_metadata</c>; email may also appear only there.
+    /// ASP.NET default inbound claim map renames <c>email</c> to ClaimTypes.Email unless <see cref="Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions.MapInboundClaims"/> is false.
+    /// </summary>
+    private static string? ResolveJwtEmail(ClaimsPrincipal user)
+    {
+        var direct = user.FindFirst("email")?.Value
+                     ?? user.FindFirst(ClaimTypes.Email)?.Value;
+        if (!string.IsNullOrWhiteSpace(direct))
+        {
+            return direct;
+        }
+
+        return TryGetUserMetadataString(user, "email");
+    }
+
+    private static string? ResolveJwtDisplayName(ClaimsPrincipal user)
+    {
+        var fromMeta = TryGetUserMetadataString(user, "full_name")
+                       ?? TryGetUserMetadataString(user, "name");
+        if (!string.IsNullOrWhiteSpace(fromMeta))
+        {
+            return fromMeta;
+        }
+
+        return user.FindFirst("name")?.Value;
+    }
+
+    private static string? ResolveJwtAvatarUrl(ClaimsPrincipal user) =>
+        TryGetUserMetadataString(user, "avatar_url")
+        ?? TryGetUserMetadataString(user, "picture");
+
+    private static string? TryGetUserMetadataString(ClaimsPrincipal user, string propertyName)
+    {
+        var raw = user.FindFirst("user_metadata")?.Value;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(raw);
+            if (!doc.RootElement.TryGetProperty(propertyName, out var prop))
+            {
+                return null;
+            }
+
+            return prop.ValueKind switch
+            {
+                JsonValueKind.String => prop.GetString(),
+                _ => null
+            };
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

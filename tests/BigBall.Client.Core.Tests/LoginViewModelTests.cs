@@ -11,8 +11,9 @@ public class LoginViewModelTests
     {
         var auth = new FakeAuthApi("stub-token");
         var tokens = new FakeTokenStore();
+        var profiles = new FakeUserProfileStore();
         var nav = new FakeNavigator();
-        var vm = new LoginViewModel(auth, tokens, nav)
+        var vm = new LoginViewModel(auth, tokens, profiles, nav)
         {
             Email = "joao.pereira@gmail.com",
             Password = "x"
@@ -24,6 +25,9 @@ public class LoginViewModelTests
         Assert.Equal("/", nav.LastRoute);
         Assert.True(nav.LastReplace);
         Assert.Null(vm.ErrorMessage);
+        Assert.NotNull(profiles.LastSnapshot);
+        Assert.Equal("joao.pereira@gmail.com", profiles.LastSnapshot!.Email);
+        Assert.Equal(0, auth.GetMyProfileCallCount);
     }
 
     [Fact]
@@ -31,8 +35,9 @@ public class LoginViewModelTests
     {
         var auth = new FakeAuthApi("unused");
         var tokens = new FakeTokenStore();
+        var profiles = new FakeUserProfileStore();
         var nav = new FakeNavigator();
-        var vm = new LoginViewModel(auth, tokens, nav)
+        var vm = new LoginViewModel(auth, tokens, profiles, nav)
         {
             Email = "",
             Password = ""
@@ -46,10 +51,35 @@ public class LoginViewModelTests
         Assert.False(string.IsNullOrWhiteSpace(vm.ErrorMessage));
     }
 
+    private sealed class FakeUserProfileStore : IUserProfileStore
+    {
+        public ProfileDto? LastSnapshot { get; private set; }
+        public event Action? SnapshotChanged;
+
+        public ProfileDto? Snapshot => LastSnapshot;
+
+        public ValueTask SetSnapshotAsync(ProfileDto profile, CancellationToken ct = default)
+        {
+            LastSnapshot = profile;
+            SnapshotChanged?.Invoke();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask ClearAsync(CancellationToken ct = default)
+        {
+            LastSnapshot = null;
+            SnapshotChanged?.Invoke();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask EnsureHydratedFromStorageAsync(CancellationToken ct = default) => ValueTask.CompletedTask;
+    }
+
     private sealed class FakeAuthApi : IAuthApi
     {
         private readonly string _token;
         public int CallCount { get; private set; }
+        public int GetMyProfileCallCount { get; private set; }
 
         public FakeAuthApi(string token) => _token = token;
 
@@ -58,7 +88,19 @@ public class LoginViewModelTests
             CallCount++;
             return Task.FromResult(new LoginResponse(
                 _token,
-                new ProfileDto(Guid.NewGuid(), "João Pereira", null)));
+                new ProfileDto(Guid.NewGuid(), "joao.pereira@gmail.com", "João Pereira", null, DateTime.UtcNow)));
+        }
+
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<OAuthRedirectUrlResponse> GetGoogleUrlAsync(string redirectTo, CancellationToken ct = default)
+            => Task.FromResult(new OAuthRedirectUrlResponse("https://example.com/auth"));
+
+        public Task<ProfileDto> GetMyProfileAsync(CancellationToken ct = default)
+        {
+            GetMyProfileCallCount++;
+            return Task.FromResult(new ProfileDto(Guid.NewGuid(), "joao.pereira@gmail.com", "João Pereira", null, DateTime.UtcNow));
         }
     }
 

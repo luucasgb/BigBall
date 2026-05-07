@@ -1,0 +1,100 @@
+@using BigBall.Web.Shared.UI
+@implements IAsyncDisposable
+
+@if (_remaining <= TimeSpan.Zero)
+{
+    <span class="bb-chip live">Bloqueado</span>
+}
+else
+{
+    <span class="pred-lock-chip bb-chip">
+        <Icon Path="@IconPaths.Lock" Size="12" />
+        <span class="pred-lock-chip-text">Fecha em @TimeFormatting.FormatPredictionDeadlineCountdown(_remaining)</span>
+    </span>
+}
+
+@code {
+    [Parameter] public DateTime KickoffUtc { get; set; }
+
+    private TimeSpan _remaining;
+    private CancellationTokenSource? _cts;
+
+    protected override void OnParametersSet()
+    {
+        _remaining = ComputeRemaining();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _cts = new CancellationTokenSource();
+        _ = RunCountdownAsync(_cts.Token);
+        await Task.CompletedTask;
+    }
+
+    private TimeSpan ComputeRemaining()
+    {
+        var k = KickoffUtc.Kind == DateTimeKind.Utc ? KickoffUtc : DateTime.SpecifyKind(KickoffUtc, DateTimeKind.Utc);
+        return k - DateTime.UtcNow;
+    }
+
+    private async Task RunCountdownAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                _remaining = ComputeRemaining();
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+                if (_remaining <= TimeSpan.Zero)
+                {
+                    return;
+                }
+
+                var delay = _remaining > TimeSpan.FromHours(12)
+                    ? TimeSpan.FromHours(1)
+                    : _remaining > TimeSpan.FromMinutes(5)
+                        ? TimeSpan.FromMinutes(1)
+                        : TimeSpan.FromSeconds(1);
+                if (delay > _remaining)
+                {
+                    delay = _remaining;
+                }
+
+                await Task.Delay(delay, ct).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // ignored
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (_cts is { } c)
+        {
+            c.Cancel();
+            c.Dispose();
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+<style>
+    .pred-lock-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .pred-lock-chip-text {
+        white-space: nowrap;
+    }
+</style>

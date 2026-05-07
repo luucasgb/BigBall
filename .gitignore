@@ -79,5 +79,22 @@ Thumbs.db
 # Blazor WASM
 wwwroot/_framework/
 
-# big-ball-handoff.zip
-Big Ball-handoff.zip
+# Claude local files
+.claude/
+
+# Cursor local files
+.cursor/
+
+# Googleusercontent local files
+*googleusercontent*
+
+# App settings
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+# Any .csv
+*.csv
+
+# dataset files
+worldcup-2026*.json

@@ -1,0 +1,32 @@
+<div class="activity-feed-container">
+    <div class="bb-dcard-h">
+        <div class="bb-dcard-title">Atividade</div>
+    </div>
+    <div class="activity-feed-empty">
+        Feed de atividade em breve.
+    </div>
+</div>
+
+@code {
+}
+
+<style>
+    .activity-feed-container {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .activity-feed-empty {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        color: var(--fg-3);
+        text-align: center;
+        padding: 12px;
+        min-height: 0;
+    }
+</style>

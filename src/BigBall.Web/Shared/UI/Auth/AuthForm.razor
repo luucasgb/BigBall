@@ -1,0 +1,38 @@
+@* Form with email and password input fields *@
+<div class="auth-form">
+    <AuthFormField Label="@EmailLabel"
+                   Type="email"
+                   Placeholder="@EmailPlaceholder"
+                   Value="@Email"
+                   ValueChanged="EmailChanged"
+                   Disabled="@Disabled" />
+    <AuthFormField Label="@PasswordLabel"
+                   Type="password"
+                   Placeholder="@PasswordPlaceholder"
+                   Value="@Password"
+                   ValueChanged="PasswordChanged"
+                   Disabled="@Disabled" />
+</div>
+
+@code {
+    [Parameter] public string Email { get; set; } = "";
+    [Parameter] public EventCallback<string> EmailChanged { get; set; }
+
+    [Parameter] public string Password { get; set; } = "";
+    [Parameter] public EventCallback<string> PasswordChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string EmailLabel { get; set; } = "E-mail";
+    [Parameter] public string EmailPlaceholder { get; set; } = "voce@email.com";
+    [Parameter] public string PasswordLabel { get; set; } = "Senha";
+    [Parameter] public string PasswordPlaceholder { get; set; } = "••••••••";
+}
+
+<style>
+    .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+</style>

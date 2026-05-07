@@ -1,0 +1,41 @@
+<div class="bb-dcard" style="padding:0;overflow:hidden;">
+    <div class="match-card-display-section">
+        <MatchDisplay HomeCode="@HomeCode" AwayCode="@AwayCode" />
+    </div>
+    <div class="match-card-input-section">
+        <PredictionInput HomePrediction="@HomePrediction"
+                         AwayPrediction="@AwayPrediction"
+                         IsLocked="@IsLocked"
+                         IsBusy="@IsBusy"
+                         HomeReferenceScore="@HomeReferenceScore"
+                         AwayReferenceScore="@AwayReferenceScore"
+                         Preview="@Preview"
+                         HomePredictionChanged="@HomePredictionChanged"
+                         AwayPredictionChanged="@AwayPredictionChanged" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public string HomeCode { get; set; } = "";
+    [Parameter] public string AwayCode { get; set; } = "";
+    [Parameter] public int HomePrediction { get; set; }
+    [Parameter] public int AwayPrediction { get; set; }
+    [Parameter] public bool IsLocked { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public int? HomeReferenceScore { get; set; }
+    [Parameter] public int? AwayReferenceScore { get; set; }
+    [Parameter] public dynamic? Preview { get; set; }
+
+    [Parameter] public EventCallback<int> HomePredictionChanged { get; set; }
+    [Parameter] public EventCallback<int> AwayPredictionChanged { get; set; }
+}
+
+<style>
+    .match-card-display-section {
+        border-bottom: 1px solid var(--line);
+    }
+
+    .match-card-input-section {
+        /* PredictionInput handles its own styling */
+    }
+</style>

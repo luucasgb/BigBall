@@ -1,0 +1,94 @@
+@page "/register"
+@inject RegisterViewModel VM
+@implements IDisposable
+
+<div class="bb-auth-page theme-dark">
+    <AuthCard Subtitle="@FormSubtitle">
+        @if (string.IsNullOrWhiteSpace(VM.SuccessMessage))
+        {
+            <div class="auth-form">
+                <AuthFormField Label="E-mail"
+                               Type="email"
+                               Placeholder="voce@email.com"
+                               Value="@VM.Email"
+                               ValueChanged="v => VM.Email = v"
+                               Disabled="@VM.IsBusy" />
+                <AuthFormField Label="Nome (opcional)"
+                               Type="text"
+                               Placeholder="Como quer ser chamado"
+                               Value="@VM.DisplayName"
+                               ValueChanged="v => VM.DisplayName = v"
+                               Disabled="@VM.IsBusy" />
+                <AuthFormField Label="Senha"
+                               Type="password"
+                               Placeholder="••••••••"
+                               Value="@VM.Password"
+                               ValueChanged="v => VM.Password = v"
+                               Disabled="@VM.IsBusy" />
+                <AuthFormField Label="Confirmar senha"
+                               Type="password"
+                               Placeholder="••••••••"
+                               Value="@VM.ConfirmPassword"
+                               ValueChanged="v => VM.ConfirmPassword = v"
+                               Disabled="@VM.IsBusy" />
+            </div>
+
+            <ErrorAlert Message="@VM.ErrorMessage" />
+
+            <AuthButton Label="Cadastrar"
+                        BusyLabel="Cadastrando…"
+                        IsBusy="@VM.IsBusy"
+                        Disabled="@(!VM.RegisterCommand.CanExecute(null))"
+                        OnClick="ExecuteRegister" />
+
+            <p class="auth-switch">
+                <a class="auth-switch-link" href="/login">Já tem conta? Entrar</a>
+            </p>
+
+            <AuthFooter>O mesmo login Supabase: após confirmar o e-mail (se exigido), use &quot;Entrar&quot;.</AuthFooter>
+        }
+        else
+        {
+            <RegistrationEmailSentPanel Message="@VM.SuccessMessage" />
+        }
+    </AuthCard>
+</div>
+
+@code {
+    private const string FormSubtitleText = "Crie sua conta com e-mail e senha para participar dos bolões.";
+
+    private string FormSubtitle =>
+        string.IsNullOrWhiteSpace(VM.SuccessMessage) ? FormSubtitleText : "";
+
+    protected override void OnInitialized() => VM.PropertyChanged += OnVmChanged;
+
+    private void OnVmChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    private async Task ExecuteRegister() => await VM.RegisterCommand.ExecuteAsync(null);
+
+    public void Dispose() => VM.PropertyChanged -= OnVmChanged;
+}
+
+<style>
+    .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .auth-switch {
+        text-align: center;
+        margin: 0;
+        font-size: 14px;
+    }
+
+    .auth-switch-link {
+        color: var(--brand-strong);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .auth-switch-link:hover {
+        text-decoration: underline;
+    }
+</style>

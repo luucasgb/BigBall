@@ -1,0 +1,73 @@
+<div class="prediction-input-section">
+    <div class="prediction-label">Seu palpite</div>
+    <div class="prediction-inputs">
+        <ScoreStepper Value="@HomePrediction"
+                      ValueChanged="v => HomePredictionChanged.InvokeAsync(v)"
+                      Disabled="@(IsLocked || IsBusy)" />
+        <div class="vs-operator">×</div>
+        <ScoreStepper Value="@AwayPrediction"
+                      ValueChanged="v => AwayPredictionChanged.InvokeAsync(v)"
+                      Disabled="@(IsLocked || IsBusy)" />
+    </div>
+    @if (Preview is { } preview)
+    {
+        <div class="prediction-preview-text">
+            Contra @HomeReferenceScore–@AwayReferenceScore:
+            <strong class="preview-points">@preview.Total pts</strong>
+            (faixa @preview.Tier@(preview.Bonus > 0 ? $" + bônus {preview.Bonus}" : ""))
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int HomePrediction { get; set; }
+    [Parameter] public int AwayPrediction { get; set; }
+    [Parameter] public bool IsLocked { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public int? HomeReferenceScore { get; set; }
+    [Parameter] public int? AwayReferenceScore { get; set; }
+    [Parameter] public dynamic? Preview { get; set; }
+
+    [Parameter] public EventCallback<int> HomePredictionChanged { get; set; }
+    [Parameter] public EventCallback<int> AwayPredictionChanged { get; set; }
+}
+
+<style>
+    .prediction-input-section {
+        padding: 20px 24px;
+        border-top: 1px solid var(--line);
+        background: var(--bg-elev-2);
+    }
+
+    .prediction-label {
+        font-size: 13px;
+        color: var(--fg-2);
+        margin-bottom: 16px;
+    }
+
+    .prediction-inputs {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .vs-operator {
+        color: var(--fg-3);
+        font-family: var(--font-display);
+        font-size: 24px;
+    }
+
+    .prediction-preview-text {
+        font-size: 13px;
+        color: var(--fg-2);
+        text-align: center;
+        margin-top: 16px;
+    }
+
+    .preview-points {
+        color: var(--brand-strong);
+        font-family: var(--font-display);
+        font-size: 16px;
+    }
+</style>

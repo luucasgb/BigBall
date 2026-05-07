@@ -1,0 +1,28 @@
+@* Submit button with loading state for auth forms *@
+<button class="bb-btn bb-btn-primary auth-button"
+        type="button"
+        disabled="@(IsBusy || Disabled)"
+        @onclick="OnClick">
+    @if (IsBusy)
+    {
+        <span>@BusyLabel</span>
+    }
+    else
+    {
+        <span>@Label</span>
+    }
+</button>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Entrar";
+    [Parameter] public string BusyLabel { get; set; } = "Entrando…";
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+}
+
+<style>
+    .auth-button {
+        width: 100%;
+    }
+</style>

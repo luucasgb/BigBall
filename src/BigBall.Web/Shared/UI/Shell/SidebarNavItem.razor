@@ -1,0 +1,33 @@
+@* Single row in the app sidebar: icon, label, optional Href; omit Href for a non-interactive (disabled) row. *@
+@inject NavigationManager Nav
+
+<div class="bb-nav-item @(IsActive ? "active" : "") @(IsEffectivelyDisabled ? "nav-item--disabled" : "")"
+     title="@Title"
+     @onclick="OnClick">
+    <Icon Path="@IconPath" Size="18" />
+    <span>@Label</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string IconPath { get; set; } = string.Empty;
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public bool IsActive { get; set; }
+    [Parameter] public string? Title { get; set; }
+
+    bool IsEffectivelyDisabled => string.IsNullOrEmpty(Href);
+
+    void OnClick()
+    {
+        if (IsEffectivelyDisabled) return;
+        Nav.NavigateTo(Href!);
+    }
+}
+
+<style>
+    .nav-item--disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+</style>

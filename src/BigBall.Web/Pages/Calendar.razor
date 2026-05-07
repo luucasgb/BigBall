@@ -1,0 +1,427 @@
+@page "/calendar"
+@layout DesktopAppLayout
+@using System.Globalization
+@using BigBall.Shared.Dtos
+@using BigBall.Shared.WorldCup
+@inject IMatchesApi MatchesApi
+@inject IPoolsApi PoolsApi
+
+<DesktopTopbar Placeholder="Buscar partida ou seleção…" />
+
+        <PageHeader Title="Calendário"
+                    Eyebrow="@_headerEyebrow">
+            <Actions>
+                <button type="button" class="bb-topbar-btn bb-topbar-btn-icon"><Icon Path="@IconPaths.ChevronL" Size="18" /></button>
+                <button type="button" class="bb-topbar-btn bb-topbar-btn-icon"><Icon Path="@IconPaths.Chevron" Size="18" /></button>
+                <button type="button" class="bb-topbar-btn">Hoje</button>
+                <button type="button" class="bb-topbar-btn"><Icon Path="@IconPaths.Filter" Size="16" /> Bolão</button>
+            </Actions>
+        </PageHeader>
+
+        @if (_loading)
+        {
+            <p class="calendar-hint" style="padding: 0 40px;">Carregando partidas…</p>
+        }
+        else if (_loadError is { } err)
+        {
+            <p class="calendar-hint" style="padding: 0 40px; color: var(--danger, #e85);">@err</p>
+        }
+        else if (_dayItemList.Count == 0)
+        {
+            <p class="calendar-hint" style="padding: 0 40px;">Nenhuma partida neste período.</p>
+        }
+        else
+        {
+        <DayPicker Items="@_dayItemList"
+                   Selected="@SelectedDay"
+                   SelectedChanged="OnDayChanged" />
+
+        <div class="calendar-layout">
+
+            <MatchListPanel Title="@_listTitle" Subtitle="@_listSubtitle">
+                @foreach (var (match, idx) in _viewMatches.Select((m, i) => (m, i)))
+                {
+                    <MatchListItem Time="@match.Time"
+                                   Phase="@match.Phase"
+                                   HomeCode="@match.HomeCode"
+                                   AwayCode="@match.AwayCode"
+                                   HomeName="@match.HomeName"
+                                   AwayName="@match.AwayName"
+                                   VenueLine="@match.VenueLine"
+                                   KickoffUtc="@match.KickoffUtc"
+                                   Status="@match.Status"
+                                   Minute="@match.Minute"
+                                   LiveHome="@match.LiveHome"
+                                   LiveAway="@match.LiveAway"
+                                   PredHome="@match.PredHome"
+                                   PredAway="@match.PredAway"
+                                   IsSelected="@match.IsSelected"
+                                   IsLast="@(idx == _viewMatches.Count - 1)"
+                                   OnSelect="() => SelectMatch(match)" />
+                }
+            </MatchListPanel>
+
+            @if (ActiveMatch is { } am)
+            {
+                <div class="bb-dcard calendar-detail-card">
+                    <CalendarDetailHeader @key="am.Id"
+                                         Phase="@am.Phase"
+                                         KickoffUtc="@am.KickoffUtc"
+                                         CenterDateLine="@am.CenterDateLine"
+                                         VenueLine="@am.VenueLine"
+                                         HomeCode="@am.HomeCode"
+                                         AwayCode="@am.AwayCode"
+                                         HomeName="@am.HomeName"
+                                         AwayName="@am.AwayName" />
+                    <div class="calendar-detail-body">
+                        <PredictionInput HomePrediction="@PredHome"
+                                         AwayPrediction="@PredAway"
+                                         IsLocked="@IsMatchLocked(am)"
+                                         IsBusy="false"
+                                         HomePredictionChanged="v => PredHome = v"
+                                         AwayPredictionChanged="v => PredAway = v" />
+                        <PoolSelector>
+                            @if (_poolSelections.Count == 0)
+                            {
+                                <p class="calendar-pool-empty">Você ainda não participa de nenhum bolão. Crie ou entre em um bolão pelo menu.</p>
+                            }
+                            else
+                            {
+                                @foreach (var pool in _poolSelections)
+                                {
+                                    <PoolSelectionItem Name="@pool.Name"
+                                                       Sub="@pool.Sub"
+                                                       Selected="@pool.Selected"
+                                                       OnToggle="() => pool.Selected = !pool.Selected" />
+                                }
+                            }
+                        </PoolSelector>
+                        <CalendarDetailActions SelectedPoolCount="@_poolSelections.Count(p => p.Selected)"
+                                               OnClear="ClearPrediction"
+                                               OnSave="SavePrediction" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="bb-dcard calendar-detail-empty">
+                    <span class="calendar-detail-empty-label">Selecione um jogo para palpitar.</span>
+                </div>
+            }
+
+        </div>
+        }
+
+@code {
+    private static readonly CultureInfo PtBr = new("pt-BR");
+
+    private static readonly DateTime RangeStart = new(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime RangeEnd = new(2026, 7, 20, 23, 59, 59, DateTimeKind.Utc);
+
+    private IReadOnlyList<MatchCalendarRowDto> _loaded = Array.Empty<MatchCalendarRowDto>();
+    private List<DayPicker.DayPickerItem> _dayItemList = new();
+    private List<MatchItem> _viewMatches = new();
+    private bool _loading = true;
+    private string? _loadError;
+    private string _headerEyebrow = "Copa do Mundo 2026";
+    private string _listTitle = "Jogos";
+    private string _listSubtitle = "";
+
+    private string SelectedDay { get; set; } = "";
+
+    private sealed class MatchItem
+    {
+        public required Guid Id { get; init; }
+        public string Time { get; init; } = "";
+        public string HomeCode { get; init; } = "";
+        public string AwayCode { get; init; } = "";
+        public string HomeName { get; init; } = "";
+        public string AwayName { get; init; } = "";
+        public string Phase { get; init; } = "";
+        public string Status { get; init; } = "open";
+        public DateTime KickoffUtc { get; init; }
+        public string CenterDateLine { get; init; } = "";
+        public string? VenueLine { get; init; }
+        public string? Minute { get; init; }
+        public int LiveHome { get; init; }
+        public int LiveAway { get; init; }
+        public int PredHome { get; init; }
+        public int PredAway { get; init; }
+        public bool IsSelected { get; set; }
+    }
+
+    private sealed class PoolSelection
+    {
+        public Guid PoolId { get; init; }
+        public string Name { get; init; } = "";
+        public string Sub { get; init; } = "";
+        public bool Selected { get; set; }
+    }
+
+    private readonly List<PoolSelection> _poolSelections = new();
+
+    private int PredHome { get; set; } = 0;
+    private int PredAway { get; set; } = 0;
+
+    private MatchItem? ActiveMatch => _viewMatches.FirstOrDefault(m => m.IsSelected);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(LoadAsync(), LoadMyPoolsAsync());
+    }
+
+    private async Task LoadMyPoolsAsync()
+    {
+        _poolSelections.Clear();
+        try
+        {
+            var pools = await PoolsApi.GetMyPoolsAsync().ConfigureAwait(false);
+            for (var i = 0; i < pools.Count; i++)
+            {
+                var p = pools[i];
+                _poolSelections.Add(new PoolSelection
+                {
+                    PoolId = p.Id,
+                    Name = p.Name,
+                    Sub = $"{p.MemberCount} membros · você #{p.MyRank}",
+                    Selected = i == 0
+                });
+            }
+        }
+        catch (Exception)
+        {
+            // Unauthenticated or API error: calendar still loads matches.
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadError = null;
+        try
+        {
+            _loaded = await MatchesApi.GetMatchesInRangeAsync(RangeStart, RangeEnd).ConfigureAwait(false);
+            RebuildUi();
+        }
+        catch (Exception)
+        {
+            _loadError = "Não foi possível carregar o calendário. Verifique a conexão e se você está autenticado.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void RebuildUi()
+    {
+        _dayItemList = _loaded
+            .GroupBy(m => GetLocalDate(m.KickoffUtc))
+            .OrderBy(g => g.Key)
+            .Select(g => new DayPicker.DayPickerItem(
+                DayNamePt(g.Key),
+                g.Key.Day.ToString("00", CultureInfo.InvariantCulture),
+                g.Key.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                g.Count()))
+            .ToList();
+
+        if (_dayItemList.Count > 0 && (string.IsNullOrEmpty(SelectedDay) || _dayItemList.All(d => d.Label != SelectedDay)))
+        {
+            SelectedDay = _dayItemList[0].Label;
+        }
+
+        RebuildViewMatches();
+        UpdateChrome();
+    }
+
+    private Task OnDayChanged(string dayLabel)
+    {
+        SelectedDay = dayLabel;
+        RebuildViewMatches();
+        UpdateChrome();
+        return Task.CompletedTask;
+    }
+
+    private void RebuildViewMatches()
+    {
+        if (string.IsNullOrEmpty(SelectedDay) || !DateOnly.TryParse(SelectedDay, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+        {
+            _viewMatches = new();
+            return;
+        }
+
+        var keepId = _viewMatches.FirstOrDefault(m => m.IsSelected)?.Id;
+
+        _viewMatches = _loaded
+            .Where(m => GetLocalDate(m.KickoffUtc) == d)
+            .OrderBy(m => m.KickoffUtc)
+            .Select(MapToItem)
+            .ToList();
+
+        if (_viewMatches.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var m in _viewMatches)
+        {
+            m.IsSelected = false;
+        }
+
+        if (keepId is { } g && _viewMatches.Any(x => x.Id == g))
+        {
+            _viewMatches.First(x => x.Id == g).IsSelected = true;
+        }
+        else
+        {
+            _viewMatches[0].IsSelected = true;
+        }
+    }
+
+    private void UpdateChrome()
+    {
+        if (string.IsNullOrEmpty(SelectedDay) || !DateOnly.TryParse(SelectedDay, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+        {
+            _headerEyebrow = "Copa do Mundo 2026";
+            _listTitle = "Jogos";
+            _listSubtitle = "";
+            return;
+        }
+
+        _headerEyebrow = d.ToString("MMMM yyyy", PtBr) + " · fase de grupos / mata-mata";
+        _listTitle = $"Jogos · {d.Day:00} {d.ToString("MMM", PtBr).TrimEnd('.')}";
+        var live = _viewMatches.Count(m => m.Status == "live");
+        _listSubtitle = $"{_viewMatches.Count} jogo{(_viewMatches.Count == 1 ? "" : "s")}" + (live > 0 ? $" · {live} ao vivo" : "");
+    }
+
+    private static MatchItem MapToItem(MatchCalendarRowDto m)
+    {
+        var local = ToLocal(m.KickoffUtc);
+        var dayAbbr = PtBr.DateTimeFormat.AbbreviatedDayNames[(int)local.DayOfWeek].TrimEnd('.');
+        var dayPart = string.IsNullOrEmpty(dayAbbr) ? local.ToString("ddd", PtBr) : dayAbbr;
+        var center = $"{dayPart} {local:dd} {local:MMM} · {local:HH:mm}".Trim();
+        return new MatchItem
+        {
+            Id = m.Id,
+            Time = local.ToString("HH:mm", CultureInfo.InvariantCulture),
+            HomeCode = m.HomeCode,
+            AwayCode = m.AwayCode,
+            HomeName = WorldCup2026TeamCodes.ToDisplayName(m.HomeCode),
+            AwayName = WorldCup2026TeamCodes.ToDisplayName(m.AwayCode),
+            Phase = string.IsNullOrEmpty(m.GroupLabel) ? m.Phase : m.GroupLabel!,
+            Status = MapUiStatus(m.Status),
+            KickoffUtc = AsUtc(m.KickoffUtc),
+            CenterDateLine = center,
+            VenueLine = FormatVenueLine(m)
+        };
+    }
+
+    private static string? FormatVenueLine(MatchCalendarRowDto m) =>
+        m.HostCity is { } h ? $"{h.CityName} · {h.VenueName}" : m.Venue;
+
+    private static DateTime AsUtc(DateTime t) =>
+        t.Kind == DateTimeKind.Utc ? t : DateTime.SpecifyKind(t, DateTimeKind.Utc);
+
+    private static string MapUiStatus(string status) =>
+        status switch
+        {
+            "Live" => "live",
+            "Finished" => "open",
+            _ => "open",
+        };
+
+    private static DateTime ToLocal(DateTime kickoffUtc)
+    {
+        var utc = kickoffUtc.Kind == DateTimeKind.Utc ? kickoffUtc : DateTime.SpecifyKind(kickoffUtc, DateTimeKind.Utc);
+        return TimeZoneInfo.ConvertTimeFromUtc(utc, TimeZoneInfo.Local);
+    }
+
+    private static DateOnly GetLocalDate(DateTime kickoffUtc)
+    {
+        return DateOnly.FromDateTime(ToLocal(kickoffUtc));
+    }
+
+    private static string DayNamePt(DateOnly d)
+    {
+        var dt = d.ToDateTime(TimeOnly.MinValue);
+        // Abbreviated day names: seg., ter. → use 3 letters uppercase
+        var abbr = PtBr.DateTimeFormat.AbbreviatedDayNames[(int)dt.DayOfWeek].TrimEnd('.');
+        return abbr.Length > 0 ? abbr.ToUpperInvariant() : d.ToString("ddd", PtBr).ToUpperInvariant();
+    }
+
+    private void SelectMatch(MatchItem match)
+    {
+        foreach (var m in _viewMatches)
+        {
+            m.IsSelected = false;
+        }
+
+        match.IsSelected = true;
+    }
+
+    private void ClearPrediction()
+    {
+        PredHome = 0;
+        PredAway = 0;
+    }
+
+    private void SavePrediction() { }
+
+    private static bool IsMatchLocked(MatchItem m) => DateTime.UtcNow >= AsUtc(m.KickoffUtc);
+}
+
+<style>
+    .bb-topbar-btn-icon {
+        width: 38px;
+        padding: 0;
+    }
+
+    .calendar-hint {
+        color: var(--fg-2);
+        font-size: 14px;
+    }
+
+    .calendar-pool-empty {
+        margin: 0;
+        font-size: 13px;
+        color: var(--fg-3);
+        line-height: 1.4;
+    }
+
+    .calendar-layout {
+        flex: 1;
+        padding: 0 40px 40px;
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 20px;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .calendar-detail-card {
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .calendar-detail-body {
+        padding: 20px 24px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto;
+    }
+
+    .calendar-detail-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .calendar-detail-empty-label {
+        font-size: 13px;
+        color: var(--fg-3);
+    }
+</style>

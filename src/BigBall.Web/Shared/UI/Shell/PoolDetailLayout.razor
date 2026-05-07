@@ -1,0 +1,23 @@
+<!-- Container layout for pool detail page (2-column grid with ranking and side panel) -->
+<div class="pool-detail-layout">
+    <div class="pool-detail-main">
+        @MainContent
+    </div>
+    <div class="pool-detail-sidebar">
+        @SidebarContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? MainContent { get; set; }
+    [Parameter] public RenderFragment? SidebarContent { get; set; }
+}
+
+<style>
+    .pool-detail-layout {
+        padding: 24px 40px 40px;
+        display: grid;
+        grid-template-columns: 1.6fr 1fr;
+        gap: 20px;
+    }
+</style>

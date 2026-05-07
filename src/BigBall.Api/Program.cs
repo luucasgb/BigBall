@@ -1,71 +1,152 @@
 using BigBall.Api.Auth;
+using BigBall.Api.Configuration;
 using BigBall.Api.Data;
+using BigBall.Api.DependencyInjection;
 using BigBall.Api.Endpoints;
+using BigBall.Api.Sync;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// STUB — substituir por Supabase JWT conforme TechSpec §4.3. Chave em appsettings NÃO é segredo de produção.
-var jwtIssuer = new StubJwtIssuer(builder.Configuration);
-builder.Services.AddSingleton(jwtIssuer);
-
-builder.Services.AddSingleton<InMemoryStore>();
-builder.Services.AddSingleton<RankingService>();
-
-var corsOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>()
-                  ?? new[] { "http://localhost:5180" };
-
-builder.Services.AddCors(options =>
+try
 {
-    options.AddDefaultPolicy(policy => policy
-        .WithOrigins(corsOrigins)
-        .AllowAnyHeader()
-        .AllowAnyMethod());
-});
+    var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    // Must run before any reads of values supplied only via user secrets (e.g. Supabase:ProjectUrl).
+    if (builder.Environment.IsDevelopment())
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer.Issuer,
-            ValidAudience = jwtIssuer.Audience,
-            IssuerSigningKey = jwtIssuer.SigningKey,
-            ClockSkew = TimeSpan.FromSeconds(30)
-        };
+        builder.Configuration.AddUserSecrets<Program>();
+    }
+
+    builder.Logging.ClearProviders();
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration));
+
+    builder.Services.Configure<SupabaseAuthOptions>(
+        builder.Configuration.GetSection(SupabaseAuthOptions.SectionName));
+
+    builder.Services.AddSportsData(builder.Configuration);
+    var supabase = builder.Configuration.GetSection(SupabaseAuthOptions.SectionName).Get<SupabaseAuthOptions>()
+                   ?? throw new InvalidOperationException("Supabase configuration missing.");
+
+    builder.Services.AddDbContext<BigBallDbContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString("Supabase")));
+    builder.Services.AddScoped<RankingService>();
+    builder.Services.AddHttpClient<SupabasePasswordAuthClient>();
+
+    var corsOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>()
+                      ?? new[] { "http://localhost:5180" };
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy => policy
+            .WithOrigins(corsOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod());
     });
-builder.Services.AddAuthorization();
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            // Keep JWT claim types as issued by Supabase ("email", "sub", …) instead of mapping to long SOAP URIs.
+            options.MapInboundClaims = false;
+            options.Authority = supabase.AuthIssuer;
+            options.MetadataAddress = $"{supabase.AuthIssuer}/.well-known/openid-configuration";
+            options.TokenValidationParameters.ValidAudience = supabase.JwtAudience;
+            options.TokenValidationParameters.ValidateAudience = true;
+            options.TokenValidationParameters.ValidateIssuer = true;
+            options.TokenValidationParameters.ValidateLifetime = true;
+            options.TokenValidationParameters.ClockSkew = TimeSpan.FromSeconds(30);
+        });
+    builder.Services.AddAuthorization();
 
-var app = builder.Build();
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
 
-// Populate in-memory seed data on startup.
-SeedData.Populate(app.Services.GetRequiredService<InMemoryStore>());
+    builder.Services.Configure<SportsApiProSyncOptions>(
+        builder.Configuration.GetSection(SportsApiProSyncOptions.SectionName));
+    builder.Services.AddMemoryCache();
+    builder.Services.AddScoped<IProviderDailyApiBudget, ProviderDailyApiBudgetService>();
+    builder.Services.AddScoped<MatchScheduleCorrelationService>();
+    builder.Services.AddHostedService<MatchFeedSyncHostedService>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    var app = builder.Build();
+
+    var startupLogger = app.Services.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("BigBall.Api.Startup");
+    startupLogger.LogInformation(
+        "BigBall API is starting. Environment: {Environment}, ContentRoot: {ContentRoot}.",
+        app.Environment.EnvironmentName,
+        app.Environment.ContentRootPath);
+
+    using (var scope = app.Services.CreateScope())
+    {
+        var sp = scope.ServiceProvider;
+        var db = sp.GetRequiredService<BigBallDbContext>();
+        await db.Database.MigrateAsync();
+
+        var config = sp.GetRequiredService<IConfiguration>();
+        var env = sp.GetRequiredService<IWebHostEnvironment>();
+        var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("BigBall.Api.Fixtures");
+        await HostCitiesSeeder.SeedAsync(db, env, logger);
+        if (config.GetValue("Fixtures:ImportWorldCup2026", false))
+        {
+            // Single-arg StartsWith is translatable; the StringComparison overload is not.
+            var hasImported = await db.Matches.AnyAsync(
+                m => m.ExternalKey != null && m.ExternalKey.StartsWith("wc2026-"));
+            if (!hasImported)
+            {
+                var path = Path.Combine(AppContext.BaseDirectory, "Data", "Fixtures", "worldcup-2026.json");
+                if (!File.Exists(path))
+                {
+                    path = Path.Combine(env.ContentRootPath, "Data", "Fixtures", "worldcup-2026.json");
+                }
+
+                if (File.Exists(path))
+                {
+                    await WorldCup2026FixtureImporter.ImportAsync(db, path);
+                    logger.LogInformation("World Cup 2026 fixtures imported from {Path}", path);
+                }
+                else
+                {
+                    logger.LogWarning("Fixtures:ImportWorldCup2026 is true but worldcup-2026.json was not found.");
+                }
+            }
+        }
+    }
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.UseSerilogRequestLogging();
+    app.UseCors();
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }))
+       .AllowAnonymous()
+       .WithTags("Health");
+
+    app.MapAuthEndpoints();
+    app.MapPoolsEndpoints();
+    app.MapMatchesEndpoints();
+    app.MapPredictionsEndpoints();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapAdminSportsEndpoints();
+    }
+
+    app.Run();
 }
-
-app.UseCors();
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }))
-   .AllowAnonymous()
-   .WithTags("Health");
-
-app.MapAuthEndpoints();
-app.MapPoolsEndpoints();
-app.MapMatchesEndpoints();
-app.MapPredictionsEndpoints();
-
-app.Run();
+finally
+{
+    Log.CloseAndFlush();
+}

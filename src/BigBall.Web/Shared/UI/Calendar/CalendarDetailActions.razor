@@ -1,0 +1,33 @@
+<div class="calendar-detail-actions">
+    <button class="bb-topbar-btn" @onclick="() => OnClear.InvokeAsync()">Limpar</button>
+    <button class="bb-topbar-btn primary" @onclick="() => OnSave.InvokeAsync()">
+        @PtCopy.SavePalpiteEmBoloes(SelectedPoolCount)
+    </button>
+</div>
+
+@code {
+    [Parameter] public int SelectedPoolCount { get; set; }
+    [Parameter] public EventCallback OnClear { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+}
+
+<style>
+    .calendar-detail-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: auto;
+        padding-top: 16px;
+    }
+
+    .calendar-detail-actions .bb-topbar-btn:first-child {
+        flex: 1;
+        height: 44px;
+        font-size: 14px;
+    }
+
+    .calendar-detail-actions .bb-topbar-btn.primary {
+        flex: 2;
+        height: 44px;
+        font-size: 14px;
+    }
+</style>

@@ -1,0 +1,45 @@
+<div class="summary-card">
+    <div class="bb-dcard-h">
+        <div class="bb-dcard-title">Resumo</div>
+    </div>
+    <div class="summary-card-body">
+        <div class="summary-card-content">@PtCopy.ActivePoolsLine(PoolCount)</div>
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="summary-card-error">@ErrorMessage</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int PoolCount { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+}
+
+<style>
+    .summary-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .summary-card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 0;
+        text-align: center;
+    }
+
+    .summary-card-content {
+        font-size: 13px;
+        color: var(--fg-2);
+    }
+
+    .summary-card-error {
+        margin-top: 8px;
+    }
+</style>

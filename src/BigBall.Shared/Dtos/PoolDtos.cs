@@ -41,5 +41,19 @@ public sealed record RankingRowDto(
     int Tier16Count,
     int PenaltyBonusCount,
     int TrendLastMatch,
+    int PredictedGamesCount,
     bool IsMe,
     int? TieGroupId);
+
+public sealed record CreatePoolRequest(
+    string Name,
+    string? Description,
+    string Visibility,
+    string PrizeDescription,
+    string? EntryCost);
+
+public sealed record CreatePoolResponse(Guid PoolId, string? InviteCode);
+
+public sealed record JoinPoolRequest(string InviteCode);
+
+public sealed record JoinPoolResponse(Guid PoolId, string PoolName);

@@ -13,4 +13,6 @@ public sealed class BlazorAppNavigator : IAppNavigator
         _nav.NavigateTo(route, forceLoad: false, replace: replace);
 
     public void NavigateToRoot() => _nav.NavigateTo("/", forceLoad: false, replace: true);
+
+    public string? GetAuthEmailRedirectUrl() => $"{_nav.BaseUri.TrimEnd('/')}/auth/callback";
 }

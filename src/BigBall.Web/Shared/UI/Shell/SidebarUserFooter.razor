@@ -1,0 +1,88 @@
+@* Avatar and account summary in the bottom area of the sidebar. *@
+@inject IAuthSession AuthSession
+
+<div class="bb-sidebar-foot">
+    <Avatar Name="@Name" ImageUrl="@AvatarUrl" Size="36" />
+    <div class="sidebar-user-meta">
+        <div class="sidebar-user-name">@Name</div>
+        <div class="sidebar-user-email">@Email</div>
+    </div>
+    <button type="button"
+            class="sidebar-logout-btn"
+            title="Sair da conta"
+            aria-label="Sair da conta"
+            disabled="@_loggingOut"
+            @onclick="LogoutAsync">
+        <Icon Path="@IconPaths.LogOut" Size="18" />
+    </button>
+</div>
+
+@code {
+    [Parameter] public string Name { get; set; } = string.Empty;
+    [Parameter] public string Email { get; set; } = string.Empty;
+    [Parameter] public string? AvatarUrl { get; set; }
+
+    private bool _loggingOut;
+
+    private async Task LogoutAsync()
+    {
+        if (_loggingOut) return;
+        _loggingOut = true;
+        try
+        {
+            await AuthSession.LogoutAsync();
+        }
+        finally
+        {
+            _loggingOut = false;
+        }
+    }
+}
+
+<style>
+    .sidebar-user-meta {
+        min-width: 0;
+    }
+
+    .sidebar-user-name {
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .sidebar-user-email {
+        font-size: 11px;
+        color: var(--fg-3);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sidebar-logout-btn {
+        margin-left: auto;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: none;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--fg-2);
+        cursor: pointer;
+    }
+
+    .sidebar-logout-btn:hover:not(:disabled) {
+        background: color-mix(in oklab, var(--fg) 8%, transparent);
+        color: var(--fg);
+    }
+
+    .sidebar-logout-btn:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+</style>

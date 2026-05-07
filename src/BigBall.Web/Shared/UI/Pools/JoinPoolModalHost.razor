@@ -1,0 +1,245 @@
+@using System.Globalization
+@implements IDisposable
+@inject IJoinPoolDialogService Dialog
+@inject IPoolsApi PoolsApi
+@inject NavigationManager Nav
+
+@if (Dialog.IsOpen)
+{
+    <div class="bb-modal-backdrop" @onclick="OnBackdrop" @onkeydown="OnKeyDown" tabindex="-1">
+        <div class="bb-modal-panel" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-labelledby="bb-join-pool-title">
+            <div class="bb-modal-header">
+                <h2 class="bb-modal-title" id="bb-join-pool-title">@(_step == Step.Form ? "Entrar com código" : "Tudo certo")</h2>
+                <button type="button" class="bb-modal-close bb-topbar-btn" @onclick="Close" aria-label="Fechar">×</button>
+            </div>
+
+            @if (_step == Step.Form)
+            {
+                <div class="bb-join-pool-form">
+                    <p class="bb-hint-p">
+                        Bolões <strong>privados</strong> não aparecem na lista pública. Peça o <strong>código de convite</strong> ao organizador e cole abaixo.
+                    </p>
+
+                    <label class="bb-field">
+                        <span class="bb-field-l">Código de convite</span>
+                        <input class="bb-input bb-invite-input" maxlength="32" autocomplete="off" autocapitalize="characters"
+                               @bind="_inviteCode" @bind:event="oninput" placeholder="Ex.: AB12CD34" />
+                    </label>
+
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <div class="bb-modal-err" role="alert">@_error</div>
+                    }
+
+                    <div class="bb-modal-actions">
+                        <button type="button" class="bb-btn bb-btn-secondary" disabled="@_busy" @onclick="Close">Cancelar</button>
+                        <button type="button" class="bb-btn bb-btn-primary" disabled="@_busy" @onclick="Submit">
+                            @if (_busy)
+                            {
+                                <text>Entrando…</text>
+                            }
+                            else
+                            {
+                                <text>Entrar</text>
+                            }
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="bb-join-pool-success">
+                    <p class="bb-succ-msg">Você passou a participar do bolão <strong>@_joinedPoolName</strong>.</p>
+                    <button type="button" class="bb-btn bb-btn-primary bb-succ-cta" @onclick="GoToPool">Ir para o bolão</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool _wasOpen;
+    private string _inviteCode = "";
+    private string? _error;
+    private bool _busy;
+    private Step _step = Step.Form;
+    private Guid _joinedPoolId;
+    private string _joinedPoolName = "";
+    private bool _subscribed;
+
+    private enum Step { Form, Success }
+
+    protected override void OnInitialized() => Subscribe();
+
+    public void Dispose() => Unsubscribe();
+
+    private void Subscribe()
+    {
+        if (_subscribed) return;
+        Dialog.StateChanged += OnDialogChanged;
+        _subscribed = true;
+    }
+
+    private void Unsubscribe()
+    {
+        if (!_subscribed) return;
+        Dialog.StateChanged -= OnDialogChanged;
+        _subscribed = false;
+    }
+
+    private void OnDialogChanged()
+    {
+        if (Dialog.IsOpen && !_wasOpen)
+        {
+            ResetForm();
+        }
+        _wasOpen = Dialog.IsOpen;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ResetForm()
+    {
+        _inviteCode = "";
+        _error = null;
+        _busy = false;
+        _step = Step.Form;
+        _joinedPoolName = "";
+    }
+
+    private void Close() => Dialog.Close();
+
+    private void OnBackdrop() => Close();
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            Close();
+        }
+    }
+
+    private async Task Submit()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_inviteCode))
+        {
+            _error = "Informe o código de convite.";
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var res = await PoolsApi.JoinPoolByInviteAsync(new JoinPoolRequest(_inviteCode.Trim()));
+            _joinedPoolId = res.PoolId;
+            _joinedPoolName = res.PoolName;
+            _step = Step.Success;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void GoToPool()
+    {
+        Dialog.Close();
+        Nav.NavigateTo($"/pools/{_joinedPoolId.ToString("D", CultureInfo.InvariantCulture)}");
+    }
+}
+
+<style>
+    .bb-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: color-mix(in oklab, var(--bg-2) 35%, rgba(0, 0, 0, 0.55));
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    .bb-modal-panel {
+        width: 100%;
+        max-width: 420px;
+        max-height: min(90vh, 640px);
+        overflow-y: auto;
+        background: var(--bg-elev);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+    }
+    .bb-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 20px 0;
+        gap: 12px;
+    }
+    .bb-modal-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+    .bb-modal-close {
+        min-width: 36px;
+        font-size: 1.4rem;
+        line-height: 1;
+    }
+    .bb-join-pool-form {
+        padding: 16px 20px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .bb-hint-p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--fg-2);
+    }
+    .bb-field { display: flex; flex-direction: column; gap: 6px; }
+    .bb-field-l { font-size: 12px; font-weight: 600; color: var(--fg-2); }
+    .bb-input {
+        width: 100%;
+        min-height: 40px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        color: var(--fg);
+        font: inherit;
+    }
+    .bb-invite-input {
+        font-family: var(--font-mono);
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+    }
+    .bb-modal-err {
+        font-size: 13px;
+        color: var(--danger);
+    }
+    .bb-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 4px;
+    }
+    .bb-join-pool-success {
+        padding: 0 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .bb-succ-msg { margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg-2); }
+    .bb-succ-cta { width: 100%; }
+</style>

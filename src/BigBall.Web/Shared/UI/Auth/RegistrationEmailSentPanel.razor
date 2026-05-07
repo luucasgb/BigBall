@@ -1,0 +1,36 @@
+@* Shown after registration when e-mail confirmation is required *@
+<div class="email-sent">
+    <div class="auth-success">@Message</div>
+    <a class="bb-btn bb-btn-primary email-sent-login" href="@LoginHref">Entrar</a>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Message { get; set; } = "";
+    [Parameter] public string LoginHref { get; set; } = "/login";
+}
+
+<style>
+    .email-sent {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .auth-success {
+        margin: 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid color-mix(in oklab, var(--success) 45%, var(--line));
+        background: color-mix(in oklab, var(--success) 12%, transparent);
+        color: var(--fg);
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    .email-sent-login {
+        width: 100%;
+        text-align: center;
+        text-decoration: none;
+        box-sizing: border-box;
+    }
+</style>

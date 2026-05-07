@@ -1,93 +1,66 @@
 @page "/pools/{PoolId:guid}"
+@layout DesktopAppLayout
 @inject PoolDetailViewModel VM
+@inject NavigationManager Nav
 @implements IDisposable
 
-<Phone>
-    <div class="bb-header">
-        <div class="bb-iconbtn" @onclick="() => VM.GoBackCommand.Execute(null)"><Icon Path="@IconPaths.ChevronL" /></div>
-        <div class="bb-header-title">@(VM.Pool?.Name ?? "Carregando…")</div>
-        <div class="bb-iconbtn"><Icon Path="@IconPaths.Dots" /></div>
-    </div>
+<DesktopTopbar Placeholder="Buscar membros, partidas, palpites…" />
 
-    <div class="bb-scroll" style="display:flex;flex-direction:column;gap:14px;">
-        @if (VM.Pool is { } pool)
-        {
-            <div class="bb-card" style="display:flex;flex-direction:column;gap:8px;">
-                <div class="bb-row spread">
-                    <div>
-                        <div style="font-size:11px;color:var(--fg-3);letter-spacing:0.04em;text-transform:uppercase;">Minha posição</div>
-                        <div class="bb-big-num">#@pool.MyPosition</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:11px;color:var(--fg-3);letter-spacing:0.04em;text-transform:uppercase;">Pontos</div>
-                        <div class="bb-big-num">@pool.MyPoints</div>
-                    </div>
-                </div>
-                @if (!string.IsNullOrEmpty(pool.PrizeDescription))
+@if (VM.Pool is { } pool)
+{
+    <PoolHeader Name="@pool.Name"
+                Visibility="@pool.Visibility"
+                PrizeDescription="@pool.PrizeDescription"
+                MemberNames="@VM.Ranking.Select(r => r.Name).ToList()"
+                OnBack="@HandleBack" />
+
+    <PoolTabNav SelectedTab="@VM.SelectedTab"
+                OnTabChanged="tab => VM.SelectedTab = tab" />
+
+    <div class="bb-content">
+        <PoolDetailLayout>
+            <MainContent>
+                @if (VM.SelectedTab == PoolTab.Ranking)
                 {
-                    <div style="font-size:12px;color:var(--fg-2);">Prêmio: <strong style="color:var(--fg);">@pool.PrizeDescription</strong></div>
+                    <RankingTable Rows="@VM.Ranking.ToList()"
+                                  MyPosition="@pool.MyPosition"
+                                  MyPoints="@pool.MyPoints"
+                                  HasTieWithMe="@VM.HasTieWithMe" />
                 }
-            </div>
-
-            <SegmentedTabs T="PoolTab"
-                           Items="@TabItems"
-                           Selected="@VM.SelectedTab"
-                           SelectedChanged="OnTabChanged" />
-
-            @if (VM.SelectedTab == PoolTab.Ranking)
-            {
-                @if (VM.HasTieWithMe)
+                else
                 {
-                    <div class="bb-alert">
-                        <Icon Path="@IconPaths.Alert" Size="18" />
-                        <div>
-                            <strong>Empate no ranking.</strong><br />
-                            Critérios alfabético + sorteio ainda não aplicados neste stub (PRD 4.8).
-                        </div>
+                    <div class="bb-dcard empty-state">
+                        <span class="bb-empty">Em breve.</span>
                     </div>
                 }
+            </MainContent>
+            <SidebarContent>
+                <div class="pool-sidebar">
+                    <TieAlert Show="@VM.HasTieWithMe" />
 
-                <div class="bb-card" style="padding:6px 14px;">
-                    @foreach (var row in VM.Ranking)
-                    {
-                        <div class="bb-rank-row @(row.IsMe ? "me" : "")">
-                            <div class="bb-rank-pos">@row.Rank</div>
-                            <Avatar Name="@row.Name" Size="28" />
-                            <div>
-                                <div class="bb-rank-name">@row.Name@(row.IsMe ? " (você)" : "")</div>
-                                <div style="font-size:11px;color:var(--fg-3);">
-                                    @row.Tier20Count × 20pts · @row.Tier16Count × 16pts
-                                </div>
-                            </div>
-                            <div class="bb-rank-pts">@row.Points</div>
-                        </div>
-                    }
+                    <MyPositionCard Position="@pool.MyPosition"
+                                    Points="@pool.MyPoints" />
+
+                    <LeaderCard LeaderName="@pool.Leader.Name"
+                                LeaderPoints="@pool.Leader.Points" />
                 </div>
-            }
-            else
-            {
-                <div class="bb-empty">Em breve.</div>
-            }
-        }
-        else if (!string.IsNullOrEmpty(VM.ErrorMessage))
-        {
-            <div class="bb-error">@VM.ErrorMessage</div>
-        }
+            </SidebarContent>
+        </PoolDetailLayout>
     </div>
-
-    <BottomNav Active="home" />
-</Phone>
+}
+else if (!string.IsNullOrEmpty(VM.ErrorMessage))
+{
+    <div class="error-container">
+        <div class="bb-error">@VM.ErrorMessage</div>
+    </div>
+}
+else
+{
+    <div class="loading-container">Carregando…</div>
+}
 
 @code {
     [Parameter] public Guid PoolId { get; set; }
-
-    private static readonly IReadOnlyList<SegmentedTabs<PoolTab>.Item> TabItems = new[]
-    {
-        new SegmentedTabs<PoolTab>.Item(PoolTab.Ranking, "Ranking"),
-        new SegmentedTabs<PoolTab>.Item(PoolTab.Matches, "Jogos"),
-        new SegmentedTabs<PoolTab>.Item(PoolTab.Prize,   "Prêmio"),
-        new SegmentedTabs<PoolTab>.Item(PoolTab.Members, "Membros"),
-    };
 
     protected override async Task OnParametersSetAsync()
     {
@@ -100,7 +73,8 @@
 
     private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
     private void OnRankingChanged(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => InvokeAsync(StateHasChanged);
-    private void OnTabChanged(PoolTab tab) => VM.SelectedTab = tab;
+
+    private void HandleBack() => Nav.NavigateTo("/");
 
     public void Dispose()
     {
@@ -108,3 +82,28 @@
         ((System.Collections.Specialized.INotifyCollectionChanged)VM.Ranking).CollectionChanged -= OnRankingChanged;
     }
 }
+
+<style>
+    .empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+    }
+
+    .error-container {
+        padding: 40px;
+    }
+
+    .loading-container {
+        padding: 40px;
+        color: var(--fg-3);
+    }
+
+    .pool-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+</style>
+

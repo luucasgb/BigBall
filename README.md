@@ -25,9 +25,9 @@ dotnet build
 **One-time repo hygiene**
 
 - In the repo root `.gitignore`, ignore `appsettings.Development.json` and `appsettings.*.json` recursively, but keep `appsettings.json` tracked.
-- Remove the API dev file from Git tracking (keep your local copy): `git rm --cached src/BigBall.Api/appsettings.Development.json`, then commit. If a real secret was ever committed, rotate it and consider purging history (e.g. `git filter-repo --path src/BigBall.Api/appsettings.Development.json --invert-paths`).
+- Remove the API dev file from Git tracking (keep your local copy): `git rm --cached BigBall.Api/appsettings.Development.json`, then commit. If a real secret was ever committed, rotate it and consider purging history (e.g. `git filter-repo --path BigBall.Api/appsettings.Development.json --invert-paths`).
 
-**User Secrets** (run from `src/BigBall.Api/`):
+**User Secrets** (run from `BigBall.Api/`):
 
 ```bash
 dotnet user-secrets init
@@ -46,12 +46,12 @@ Secrets are stored outside the repo (Windows: `%APPDATA%\Microsoft\UserSecrets\<
 
 #### 1. Start the API (port 5080)
 ```bash
-dotnet run --project src/BigBall.Api
+dotnet run --project BigBall.Api
 ```
 
 #### 2. Start the Web Client (port 5180)
 ```bash
-dotnet run --project src/BigBall.Web
+dotnet run --project BigBall.Web
 ```
 
 Open **http://localhost:5180** in your browser.
@@ -66,7 +66,7 @@ The API uses [Serilog](https://serilog.net/) with console, rolling files under `
 docker run --name seq -d --restart unless-stopped -e ACCEPT_EULA=Y -e SEQ_FIRSTRUN_ADMINPASSWORD=<MyPassword> -v seq-data:/data -p 5341:80 datalust/seq
 ```
 
-After the container is healthy, open the Seq UI at **http://localhost:5341**. The API’s [`appsettings.Development.json`](src/BigBall.Api/appsettings.Development.json) is configured to send events to that address when `ASPNETCORE_ENVIRONMENT` is `Development` (the default for `dotnet run`).
+After the container is healthy, open the Seq UI at **http://localhost:5341**. The API’s [`appsettings.Development.json`](BigBall.Api/appsettings.Development.json) is configured to send events to that address when `ASPNETCORE_ENVIRONMENT` is `Development` (the default for `dotnet run`).
 
 ### Login
 

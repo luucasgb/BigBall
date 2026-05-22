@@ -21,9 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\BigBall.Client.Core\BigBall.Client.Core.csproj" />
-    <ProjectReference Include="..\..\src\BigBall.Shared\BigBall.Shared.csproj" />
-    <ProjectReference Include="..\..\src\BigBall.Domain\BigBall.Domain.csproj" />
+    <ProjectReference Include="..\BigBall.Domain\BigBall.Domain.csproj" />
+    <ProjectReference Include="..\BigBall.Shared\BigBall.Shared.csproj" />
   </ItemGroup>
 
 </Project>

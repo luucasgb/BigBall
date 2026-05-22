@@ -510,7 +510,7 @@ When creating new pages or refactoring, ensure proper sidebar navigation:
 
 ## Tools & Utilities Location
 
-All reusable utilities go in `src/BigBall.Web/Shared/UI/`:
+All reusable utilities go in `BigBall.Web/Shared/UI/`:
 
 - **TimeFormatting.cs** — Time formatting utilities
 - **[Future]** — Form validation utilities

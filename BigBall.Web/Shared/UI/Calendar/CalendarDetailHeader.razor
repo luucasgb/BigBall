@@ -1,3 +1,6 @@
+@using BigBall.Web.Shared.State
+@inject TeamBadgeCache TeamBadges
+
 <div class="calendar-detail-header">
     <div class="calendar-detail-chips">
         <span class="bb-chip">@Phase</span>
@@ -6,7 +9,7 @@
     </div>
     <div class="calendar-detail-teams">
         <div class="calendar-detail-team">
-            <Flag Code="@HomeCode" Size="64" />
+            <Flag Code="@HomeCode" Size="64" ImageUrl="@TeamBadges.GetBadgeUrl(HomeCode)" />
             <div class="calendar-detail-team-name">@HomeName</div>
         </div>
         <div class="calendar-detail-vs">
@@ -18,7 +21,7 @@
             }
         </div>
         <div class="calendar-detail-team">
-            <Flag Code="@AwayCode" Size="64" />
+            <Flag Code="@AwayCode" Size="64" ImageUrl="@TeamBadges.GetBadgeUrl(AwayCode)" />
             <div class="calendar-detail-team-name">@AwayName</div>
         </div>
     </div>
@@ -33,6 +36,11 @@
     [Parameter] public string AwayCode { get; set; } = "";
     [Parameter] public string HomeName { get; set; } = "";
     [Parameter] public string AwayName { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await TeamBadges.EnsureLoadedAsync();
+    }
 }
 
 <style>

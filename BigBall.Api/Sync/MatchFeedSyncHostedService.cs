@@ -7,10 +7,10 @@ using Microsoft.Extensions.Options;
 
 namespace BigBall.Api.Sync;
 
-/// <summary>Polls persisted matches inside a rolling KO horizon (see <see cref="SportsApiProSyncOptions"/>).</summary>
+/// <summary>Polls persisted matches inside a rolling KO horizon (see <see cref="MatchProviderSyncOptions"/>).</summary>
 internal sealed class MatchFeedSyncHostedService(
     IServiceScopeFactory scopes,
-    IOptions<SportsApiProSyncOptions> opts,
+    IOptions<MatchProviderSyncOptions> opts,
     ILogger<MatchFeedSyncHostedService> logger)
     : BackgroundService
 {
@@ -20,7 +20,7 @@ internal sealed class MatchFeedSyncHostedService(
         if (!o.Enabled)
         {
             logger.LogInformation("{Service}: disabled ({Section}:Enabled=false).",
-                nameof(MatchFeedSyncHostedService), SportsApiProSyncOptions.SectionName);
+                nameof(MatchFeedSyncHostedService), MatchProviderSyncOptions.SectionName);
             return;
         }
 
@@ -35,7 +35,7 @@ internal sealed class MatchFeedSyncHostedService(
                 await using var scope = scopes.CreateAsyncScope();
                 var sp = scope.ServiceProvider;
                 var db = sp.GetRequiredService<BigBallDbContext>();
-                var cfg = sp.GetRequiredService<IOptions<SportsApiProSyncOptions>>().Value;
+                var cfg = sp.GetRequiredService<IOptions<MatchProviderSyncOptions>>().Value;
                 var corr = sp.GetRequiredService<MatchScheduleCorrelationService>();
                 var sports = sp.GetRequiredService<ISportsDataSource>();
                 var budget = sp.GetRequiredService<IProviderDailyApiBudget>();
@@ -55,7 +55,7 @@ internal sealed class MatchFeedSyncHostedService(
 
     private static async Task RunTickAsync(
         BigBallDbContext db,
-        SportsApiProSyncOptions o,
+        MatchProviderSyncOptions o,
         MatchScheduleCorrelationService corr,
         ISportsDataSource sports,
         IProviderDailyApiBudget budget,
@@ -90,7 +90,7 @@ internal sealed class MatchFeedSyncHostedService(
 
             if (!MatchPollingIntervals.IsDue(utc,
                     kick,
-                    match.LastProviderStatusCode,
+                    match.LastLifecyclePhase,
                     match.ProviderLastSyncedUtc,
                     o))
                 continue;
@@ -117,7 +117,9 @@ internal sealed class MatchFeedSyncHostedService(
             if (snap is null)
                 continue;
 
-            SportsMatchFeedSyncApplier.Apply(match, snap, utc, utc);
+            await SportsMatchFeedSyncApplier
+                .ApplyAsync(db, match, snap, utc, utc, ct)
+                .ConfigureAwait(false);
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }

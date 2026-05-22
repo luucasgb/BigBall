@@ -1,14 +1,17 @@
+@using BigBall.Web.Shared.State
+@inject TeamBadgeCache TeamBadges
+
 <div class="match-display">
     <div class="match-display-inner">
         <div class="team-column">
-            <Flag Code="@HomeCode" Size="72" />
+            <Flag Code="@HomeCode" Size="72" ImageUrl="@TeamBadges.GetBadgeUrl(HomeCode)" />
             <div class="team-code">@HomeCode</div>
         </div>
         <div class="vs-divider">
             <div class="vs-text">vs</div>
         </div>
         <div class="team-column">
-            <Flag Code="@AwayCode" Size="72" />
+            <Flag Code="@AwayCode" Size="72" ImageUrl="@TeamBadges.GetBadgeUrl(AwayCode)" />
             <div class="team-code">@AwayCode</div>
         </div>
     </div>
@@ -17,6 +20,11 @@
 @code {
     [Parameter] public string HomeCode { get; set; } = "";
     [Parameter] public string AwayCode { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await TeamBadges.EnsureLoadedAsync();
+    }
 }
 
 <style>

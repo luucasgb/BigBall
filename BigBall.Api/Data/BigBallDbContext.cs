@@ -14,6 +14,7 @@ public sealed class BigBallDbContext : DbContext
     public DbSet<HostCity> HostCities => Set<HostCity>();
     public DbSet<Prediction> Predictions => Set<Prediction>();
     public DbSet<ProviderDailyApiUsage> ProviderDailyApiUsages => Set<ProviderDailyApiUsage>();
+    public DbSet<Team> Teams => Set<Team>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -82,6 +83,7 @@ public sealed class BigBallDbContext : DbContext
             entity.Property(x => x.ExternalKey).HasColumnName("external_key").HasMaxLength(64);
             entity.Property(x => x.ProviderExternalMatchId).HasColumnName("provider_external_match_id").HasMaxLength(32);
             entity.Property(x => x.LastProviderStatusCode).HasColumnName("last_provider_status_code");
+            entity.Property(x => x.LastLifecyclePhase).HasColumnName("last_lifecycle_phase").HasConversion<string>().HasMaxLength(40);
             entity.Property(x => x.ProviderLastSyncedUtc).HasColumnName("provider_last_synced_utc");
             entity.Property(x => x.KickoffUtc).HasColumnName("kickoff_utc");
             entity.HasIndex(x => x.ExternalKey).IsUnique();
@@ -105,6 +107,21 @@ public sealed class BigBallDbContext : DbContext
             entity.HasKey(x => x.DayUtc);
             entity.Property(x => x.DayUtc).HasColumnName("day_utc");
             entity.Property(x => x.HttpGetCount).HasColumnName("http_get_count").IsRequired();
+        });
+
+        modelBuilder.Entity<Team>(entity =>
+        {
+            entity.ToTable("teams");
+            entity.HasKey(x => x.Code);
+            entity.Property(x => x.Code).HasColumnName("code").HasMaxLength(8);
+            entity.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(120).IsRequired();
+            entity.Property(x => x.BadgeUrl).HasColumnName("badge_url").HasMaxLength(512);
+            entity.Property(x => x.BadgeUrlSmall).HasColumnName("badge_url_small").HasMaxLength(512);
+            entity.Property(x => x.CountryImageUrl).HasColumnName("country_image_url").HasMaxLength(512);
+            entity.Property(x => x.FlashScoreTeamId).HasColumnName("flashscore_team_id").HasMaxLength(32);
+            entity.Property(x => x.FlashScoreTeamUrl).HasColumnName("flashscore_team_url").HasMaxLength(64);
+            entity.Property(x => x.LastUpdatedUtc).HasColumnName("last_updated_utc");
+            entity.Property(x => x.LastSource).HasColumnName("last_source").HasMaxLength(24);
         });
 
         modelBuilder.Entity<Prediction>(entity =>

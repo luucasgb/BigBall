@@ -67,8 +67,8 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
-    builder.Services.Configure<SportsApiProSyncOptions>(
-        builder.Configuration.GetSection(SportsApiProSyncOptions.SectionName));
+    builder.Services.Configure<MatchProviderSyncOptions>(
+        builder.Configuration.GetSection(MatchProviderSyncOptions.SectionName));
     builder.Services.AddMemoryCache();
     builder.Services.AddScoped<IProviderDailyApiBudget, ProviderDailyApiBudgetService>();
     builder.Services.AddScoped<MatchScheduleCorrelationService>();
@@ -138,11 +138,7 @@ try
     app.MapPoolsEndpoints();
     app.MapMatchesEndpoints();
     app.MapPredictionsEndpoints();
-
-    if (app.Environment.IsDevelopment())
-    {
-        app.MapAdminSportsEndpoints();
-    }
+    app.MapTeamsEndpoints();
 
     app.Run();
 }

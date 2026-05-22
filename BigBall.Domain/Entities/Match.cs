@@ -1,4 +1,5 @@
 using BigBall.Domain.Enums;
+using BigBall.Domain.SportsData;
 
 namespace BigBall.Domain.Entities;
 
@@ -16,8 +17,11 @@ public sealed class Match
     /// <summary>SportsAPI Pro (ou equivalente) event id quando correlacionado ao calendário do fornecedor.</summary>
     public string? ProviderExternalMatchId { get; set; }
 
-    /// <summary>Último <c>status.code</c> do fornecedor de dados (TechSpec §6.2).</summary>
+    /// <summary>Último <c>status.code</c> do fornecedor de dados (legado SportsAPI Pro; null para provedores que não usam código numérico).</summary>
     public int? LastProviderStatusCode { get; set; }
+
+    /// <summary>Última fase canónica observada (provider-agnóstica; alimenta a cadência de polling — TechSpec §6.2).</summary>
+    public MatchLifecyclePhase LastLifecyclePhase { get; set; } = MatchLifecyclePhase.Unknown;
 
     /// <summary>Última vez que o job de sync obteve snapshot do fornecedor para esta partida.</summary>
     public DateTime? ProviderLastSyncedUtc { get; set; }

@@ -1,7 +1,7 @@
 # BigBall — Technical Specification (Tech Spec)
 
-**Versão:** 1.3  
-**Data:** 28 de abril de 2026  
+**Versão:** 1.4  
+**Data:** 22 de maio de 2026  
 **Documento relacionado:** [PRD.md](./PRD.md) — requisitos de produto, regras de pontuação, lock, elegibilidade e auditoria **não** são repetidos aqui; este ficheiro cobre **stack**, integrações e decisões de implementação.
 
 ---
@@ -79,13 +79,15 @@ Opcional no MVP se **todo** o acesso a dados sensíveis passar pela API com cred
 ### 4.5 Integração com o provedor de partidas
 
 - Cliente HTTP resiliente (**HttpClient** + **Polly**: retry, circuit breaker).
-- Configuração por ambiente (`IOptions`): URL base, chave API, timeouts.
-- **Adapter** isolado: mapeia o payload do fornecedor para o modelo canónico `Match` do domínio (PRD secção 8), segundo as regras de **mapeamento explícito** da **secção 6.2** (sem inferir TR a partir de “final” ambíguo).
+- Configuração por ambiente (`IOptions`): URL base, chave API, timeouts. **Apenas o backend (.NET)** chama o provedor — clientes nunca seguram chaves.
+- **Adapter** isolado por trás de `ISportsDataSource` (em `BigBall.Domain.SportsData`): mapeia o payload do fornecedor para o modelo canónico `SportsMatchSnapshot`, segundo as regras de **mapeamento explícito** da **secção 6.2** (sem inferir TR a partir de “final” ambíguo).
+- **Adapter vigente (MVP):** `FlashScoreSportsDataSource` (FlashScore via RapidAPI). Usa **no máximo 2 GETs por partida** — `…/matches/details` (obrigatório) e, condicionalmente, `…/matches/penalties` quando há disputa de pênaltis (§6.2.2). Sem WebSocket no MVP.
+- O adapter `SportsApiProSportsDataSource` permanece no código (`BigBall.Api/Integrations/SportsApiPro/*`) como **reserva/histórico** e referência de mapeamento (§6.2.1); não está registado em DI por padrão.
 
 ### 4.6 Jobs agendados
 
 - Sincronizar calendário/estado/placar; ao detetar atualização do provedor que substitui resultado manual, disparar **recálculo idempotente** de pontos e rankings (PRD 4.11).
-- Implementação sugerida: **`IHostedService` / `BackgroundService`**, **Quartz.NET** ou **Hangfire** — escolha documentada no repositório quando o código existir.
+- Implementação atual: **`MatchFeedSyncHostedService`** (`BackgroundService`) parametrizado por **`MatchProviderSyncOptions`** (provider-agnóstico, secção JSON `MatchProviderSync`). A cadência é decidida pela fase canónica `MatchLifecyclePhase` via `MatchPollingIntervals.GapForPhase` — ver §6.2.5 para política quota-aware.
 
 ---
 
@@ -109,8 +111,8 @@ A escolha do fornecedor **não bloqueia** o modelo canónico `Match`, desde que 
 
 | Fase | Provedor alvo | Observação |
 | ---- | ------------- | ---------- |
-| **Desenvolvimento e testes do MVP** | [SportsAPI Pro](https://docs.sportsapipro.com/introduction) | REST e WebSocket; avaliar tier **Football** e latência adequada ao volume da Copa. |
-| **Produção (a confirmar)** | SportsAPI Pro *ou* migração | Critérios: custo, cobertura Copa 2026, SLA, qualidade do placar (TR vs prorrogação vs pênaltis). Alternativa citada no PRD: [FlashScore na RapidAPI](https://rapidapi.com/rapidapi-org1-rapidapi-org-default/api/flashscore4) após análise comparativa. |
+| **MVP — desenvolvimento, testes e produção** | [FlashScore via RapidAPI](https://rapidapi.com/rapidapi-org1-rapidapi-org-default/api/flashscore4) | REST. Adapter `FlashScoreSportsDataSource` cabeado por padrão (`SportsData:Provider=FlashScore`). Auth via headers `X-RapidAPI-Key` + `X-RapidAPI-Host`. Mapeamento campo-a-campo em §6.2.2. |
+| **Legado / reserva (não cabeado)** | [SportsAPI Pro](https://docs.sportsapipro.com/introduction) | Adapter `SportsApiProSportsDataSource` permanece em `BigBall.Api/Integrations/SportsApiPro/*` para fallback. Mapeamento histórico em §6.2.1. Para reativar: adicionar branch `SportsApiPro` em `SportsDataServiceCollectionExtensions.AddSportsData` e definir `SportsData:Provider=SportsApiPro`. |
 
 ### 6.1 Requisitos de engenharia (partidas)
 
@@ -138,7 +140,7 @@ A escolha do fornecedor **não bloqueia** o modelo canónico `Match`, desde que 
 | Identificador do **vencedor na disputa de pênaltis** | Bônus +3 (PRD 4.8) |
 | Metadados de **origem vigente** do resultado | PRD 4.6, 4.11 |
 
-#### 6.2.1 Tabela de mapeamento — SportsAPI Pro (MVP)
+#### 6.2.1 Tabela de mapeamento — SportsAPI Pro (legado / não cabeado)
 
 Implementação de referência no repositório: `SportsApiProMapper` (leitura de estado via `GetStatusCode`, conversão via `MapLifecycleFromStatus`). O nó **`event`** obtém-se da raiz da resposta como `event`, `data`, ou raiz quando já contém `id` / `startTimestamp`.
 
@@ -175,24 +177,66 @@ Implementação de referência no repositório: `SportsApiProMapper` (leitura de
 | `120` | `FinishedAfterPenalties` |
 | *outros / ausente* | `Unknown` |
 
-#### 6.2.2 Provedor adicional ou migração (ex.: FlashScore via RapidAPI)
+#### 6.2.2 Tabela de mapeamento — FlashScore (RapidAPI) — provedor vigente
 
-Criar **nova** tabela com a mesma estrutura de alvos canónicos; **não** reutilizar paths do SportsAPI Pro sem revisão. Critérios de escolha de produção permanecem na tabela introdutória da secção 6.
+Implementação de referência no repositório: `FlashScoreMapper` + `FlashScoreSportsDataSource` (`BigBall.Api/Integrations/FlashScore/*`). Auth via `FlashScoreApiKeyHandler` (`X-RapidAPI-Key`, `X-RapidAPI-Host`).
+
+**Endpoints REST (RapidAPI):**
+
+- `GET /api/flashscore/v2/matches/details?match_id={id}` — payload **principal** (1 GET por refresh).
+- `GET /api/flashscore/v2/matches/penalties?match_id={id}` — **condicional**: o adapter só chama quando o JSON principal sinaliza disputa de pênaltis (`match_status.is_finished_after_penalties == true` ou `scores.home_penalties`/`away_penalties` preenchidos).
+- `GET /api/flashscore/v2/matches/list-by-date?sport_id=1&date={yyyy-MM-dd}` — schedule diário usado por `MatchScheduleCorrelationService.TryHydrateSportsApiIdAsync`.
+
+**Custo típico por partida:** 1 GET pré-pênaltis; 2 GETs durante/após pênaltis. **Sem WebSocket.**
+
+| Alvo canónico (`SportsMatchSnapshot`) | Campo / path no payload FlashScore | Notas | Gap |
+| ------------------------------------- | ----------------------------------- | ----- | --- |
+| `ExternalMatchId` | `match_id` (string) | Identificador estável do RapidAPI; não numérico (ex.: `"GCxZ2uHc"`). | não |
+| `KickoffUtc` | `timestamp` (epoch Unix **segundos**, UTC) | Normalizado via `DateTimeOffset.FromUnixTimeSeconds` no `FlashScoreMapper`. | não |
+| `Phase` (`MatchLifecyclePhase`) | derivada de **flags** em `match_status` + presença de campos em `scores` — ver §6.2.4 | Sem código numérico; lógica em `FlashScoreMapper.MapLifecycle`. | não |
+| `ProviderStatusCode` | — | Sempre **null** para FlashScore; campo legado preservado por compatibilidade com SportsAPI Pro. | n/a |
+| `GoalsHomeRegularTime` | `scores.home_total`; fallback `scores.home_1st_half + scores.home_2nd_half` | FlashScore expõe totais limpos em todas as fases. | não |
+| `GoalsAwayRegularTime` | `scores.away_total`; fallback equivalente | Idem. | não |
+| `RegularTimeScoresReliable` | computado a partir da fase + totais presentes (`FlashScoreMapper.ExtractRegularTimeGoals`) | True para `FinishedRegulation`/`After*` e fases ao vivo a partir de `SecondHalf`. | não |
+| `WentToExtraTime` | `match_status.is_finished_after_extra_time` **ou** `scores.home_extra_time`/`away_extra_time` não-nulos **ou** fase implica EST | Combinação de sinais. | não |
+| `WentToPenaltyShootout` | `match_status.is_finished_after_penalties` **ou** `scores.home_penalties`/`away_penalties` não-nulos **ou** fase implica pênaltis | Idem. | não |
+| `PenaltyWinnerIsHome` | `match_status.final_winner` (`"home"` / `"away"`); fallback `scores.home_penalties` vs `scores.away_penalties`; último recurso payload de `…/penalties` | Bônus +3 (PRD 4.8) só com disputa real. | **sim** se `is_finished_after_penalties=true` e `final_winner` ausente e placares de pênaltis empatados/ausentes. |
+| `ResultOrigin` | computado em `FlashScoreMapper.ResolveResultOrigin` | `ProviderComplete` para fase terminal com TR confiável; `GapRegularTimeUnresolved` quando fase exige TR mas totais ausentes. | — |
+
+**Provedor adicional ou migração futura:** criar **nova** tabela com a mesma estrutura de alvos canónicos; **não** reutilizar paths sem revisão. O modelo `SportsMatchSnapshot` e o enum `MatchLifecyclePhase` são o contrato estável que todos os adapters devem produzir.
 
 #### 6.2.3 Comportamento quando Gap = sim ou TR inválido
 
 O job de sincronização **não inventa** gols de TR. Se a partida, pelo calendário interno, exigir resultado para pontuação e o canónico **TR** estiver indisponível ou marcado como gap: aplicar **PRD 4.11** (administrador de plataforma); quando o feed passar a fornecer TR mapeável, **prevalece** o provedor e dispara-se recálculo idempotente.
 
-#### 6.2.4 Semântica tempo regulamentar / prorrogação / pênaltis (SportsAPI Pro)
+#### 6.2.4 Semântica tempo regulamentar / prorrogação / pênaltis (FlashScore — provedor vigente)
 
-Leitura **normativa** em conjunto com a tabela de códigos em **§6.2.1** e com o PRD (faixas 1–5 = TR em 4.8).
+Leitura **normativa** em conjunto com a tabela em **§6.2.2** e com o PRD (faixas 1–5 = TR em 4.8). FlashScore **não usa códigos numéricos**: a fase canónica é derivada de **flags booleanas** em `match_status` combinadas com a presença de campos em `scores`.
 
-- **Fim do tempo regulamentar (TR):** código **`100`** (`FinishedRegulation`). Placar TR deve vir preferencialmente de **`homeScore.normaltime` / `awayScore.normaltime`** (ou equivalente seguro definido no adapter).
-- **Prorrogação em curso:** **`40`** (`ExtraTimeFirstHalf`), **`41`** (`ExtraTimeSecondHalf`). **Encerramento após prorrogação (sem decisão apenas por pênaltis segundo o feed):** **`110`** (`FinishedAfterExtraTime`).
-- **Disputa de pênaltis:** **`50`** (`PenaltyShootoutInProgress`) durante a marcação; **`120`** (`FinishedAfterPenalties`) quando a partida fecha **após** pênaltis.
-- **Transição típica (polling contra `status`):** caminho para **há prorrogação** — segundo tempo **`7`** → intervalo/multi‑purpose **`31`** (`Halftime`) → início de prorrogação **`40`**. Caminho para **sem prorrogação** — **`7`** → **`100`** (fim ao fim dos 90′+acréscimos). Esta leitura apoia o produto (PRD 4.6.1) ao **antecipar** prorrogação; qualquer automatismo deve tolerar payloads atrasados ou fora de ordem.
+**Tabela de derivação de `MatchLifecyclePhase` (em `FlashScoreMapper.MapLifecycle`, primeira regra que casa):**
 
-Referência §4.6 (jobs): a sincronização quota‑aware (**§6.2.5**) não altera estas semânticas; apenas governa **quando** refrescar cada partida.
+| Fase canónica | Condição |
+| ------------- | -------- |
+| `Canceled` | `match_status.is_cancelled == true` |
+| `Postponed` | `match_status.is_postponed == true` |
+| `FinishedAfterPenalties` | `match_status.is_finished_after_penalties == true` |
+| `FinishedAfterExtraTime` | `match_status.is_finished_after_extra_time == true` |
+| `FinishedRegulation` | `match_status.is_finished == true` (sem as flags acima) |
+| `PenaltyShootoutInProgress` | `is_in_progress == true` + `scores.home_penalties`/`away_penalties` presentes |
+| `ExtraTimeFirstHalf` | `is_in_progress == true` + `scores.home_extra_time`/`away_extra_time` presentes (a granularidade ET-1 vs ET-2 não está exposta; assume-se ET-1 e o polling reclassifica) |
+| `SecondHalf` | `is_in_progress == true` + `scores.home_2nd_half` ou `away_2nd_half` > 0 |
+| `FirstHalf` | `is_in_progress == true` (sem sinais acima) |
+| `Halftime` | `is_started == true` + **não** `is_in_progress` + **não** `is_finished` (inferência) |
+| `NotStarted` | nenhum dos acima |
+| `Unknown` | `match_status` ausente |
+
+**Fim do tempo regulamentar (TR):** ocorre quando a fase é `FinishedRegulation`, `FinishedAfterExtraTime` ou `FinishedAfterPenalties`. O placar TR vem de **`scores.home_total` / `scores.away_total`** (sempre expostos) com fallback **`home_1st_half + home_2nd_half`** quando os totais estiverem ausentes.
+
+**Limitação importante (cf. PRD 4.6.1):** FlashScore **não expõe o minuto corrido** no payload de detalhes; a distinção fina entre 1H / 2H / Halftime / ET-1 / ET-2 depende de polling periódico e dos campos auxiliares de score por período. Para o produto (cálculo de pontos), apenas a fronteira **terminal vs não-terminal** importa — e essa é inequívoca via as flags `is_finished*`.
+
+**Transição típica para antecipar prorrogação:** `SecondHalf` → `Halftime` (intervalo antes da ET) → `ExtraTimeFirstHalf` (presença de `home_extra_time`/`away_extra_time`) → `FinishedAfterExtraTime` ou `PenaltyShootoutInProgress` → `FinishedAfterPenalties`. Caminho sem prorrogação: `SecondHalf` → `FinishedRegulation` direto. Automatismos toleram payloads atrasados ou fora de ordem.
+
+Referência §4.6 (jobs): a sincronização quota‑aware (**§6.2.5**) opera sobre a fase canónica via `MatchPollingIntervals.GapForPhase` e é provider-agnóstica.
 
 #### 6.2.5 Sincronização quota‑aware com o provedor
 
@@ -200,44 +244,46 @@ Objetivo: respeitar **limites económicos e operacionais** do fornecedor (pedido
 
 **Separação de responsabilidades**
 
-- **Somente o backend (.NET)** invoca HTTP ao **SportsAPI Pro** (ou futuro provedor). Clientes (Blazor, MAUI, etc.) consumem apenas a **API BigBall** (JWT), alinhado a §§4.5–4.6 e PRD §9.
+- **Somente o backend (.NET)** invoca HTTP ao provedor (atualmente **FlashScore via RapidAPI**). Clientes (Blazor, MAUI, etc.) consomem apenas a **API BigBall** (JWT), alinhado a §§4.5–4.6 e PRD §9.
 
-**Custo atual por refresh “completo” (implementação típica do adapter)**
+**Custo atual por refresh (FlashScore — provedor vigente)**
 
-- Até **três GETs HTTP** por ciclo de leitura de uma partida: **`GET …/api/match/{id}`**, opcionalmente **`GET …/scores`** e **`GET …/penalties`**. **Orçamento diário deve contabilizar chamadas HTTP**, não só “número de jogos tocados”.
-- **Política de redução (direção de desenho):** obter sempre o recurso **`/api/match/{id}`** primeiro; chamar **`/scores`** e **`/penalties`** **apenas quando** o JSON principal não for suficiente para o snapshot (por exemplo quando `normaltime` já satisfaz TR e **`/penalties`** só é necessário perto de **`50`/`120`** ou quando o mapper assinalar lacuna). Documentar decisões equivalentes quando o código existir.
+- **Até 2 GETs HTTP** por ciclo de leitura de uma partida: **`GET …/matches/details`** (sempre) e, condicionalmente, **`GET …/matches/penalties`** (apenas quando o adapter detecta sinal de disputa de pênaltis — `FlashScoreMapper.ShouldRequestPenaltiesEndpoint`). **Orçamento diário deve contabilizar chamadas HTTP**, não só "número de jogos tocados".
+- **Política de redução (direção de desenho):** preferir `…/matches/details` por já trazer placar TR limpo (`scores.home_total` / `away_total`); só chamar `…/matches/penalties` quando o mapper sinalizar disputa real (ver §6.2.2 — coluna Gap do alvo `PenaltyWinnerIsHome`).
+- **Nota sobre quota RapidAPI:** o RapidAPI **não expõe headers de quota** de forma consistente para este endpoint. O orçamento `MatchProviderSync:DailyRequestBudget` é a única defesa contra estouro do tier contratado.
+- **Histórico (adapter SportsAPI Pro legado, não cabeado):** até **3 GETs HTTP** — `…/api/match/{id}` + opcional `/scores` + opcional `/penalties`.
 
 **Janelas temporais**
 
 - **Não** gastar quota a fazer polling de partidas **distantes** no tempo; concentrar pedidos na **janela útil** (ex.: **X minutos antes** do pontapé inicial até estado **terminal** + **margem curta** para reconciliação tardia do provedor).
 
-**Cadência dinâmica por fase (valores apenas exemplificativos)**
+**Cadência dinâmica por fase canónica** — `MatchPollingIntervals.GapForPhase` lê `MatchLifecyclePhase` (provider-agnóstica) e mapeia para segundos de `MatchProviderSyncOptions`:
 
-- Intervalos diferentes por **categoria**: pré‑jogo / ao vivo no TR / intervalos e prorrogação (`31`, `40`, `41`) / pênaltis (`50`, `120`) / pós‑jogo.
-- **`NotStarted`**: pouco frequente.
-- **`FirstHalf` / `SecondHalf`**: moderado; opcionalmente **apertar** perto do fim do regulamento.
-- **Prorrogação e pênaltis** (códigos **`31`/`40`/`41`/`50`/`120` conforme caso): maior frequência até estado terminal.
-- **Estados finais** (**`60`–`120`** conforme tabela §6.2.1): **retroceder** intervalo ou **parar** refreshes quando o resultado já for estável na base.
+- `NotStarted` → `SecondsPreMatchStale` (pouco frequente).
+- `FirstHalf` / `SecondHalf` → `SecondsFirstHalf` / `SecondsSecondHalf` (moderado).
+- `Halftime` / `Interrupted` / `Unknown` → `SecondsHalftimeBreak`.
+- `ExtraTimeFirstHalf` / `ExtraTimeSecondHalf` / `PenaltyShootoutInProgress` → `SecondsExtraOrPenalties` (maior frequência até terminal).
+- `FinishedRegulation` / `FinishedAfterExtraTime` / `FinishedAfterPenalties` / `Postponed` / `Canceled` / `Abandoned` → `SecondsTerminalReconciliation` (reconciliação curta; eventualmente **parar** refreshes ao passar do horizonte).
 
 **Orçamento diário**
 
-- Limite **`DailyRequestBudget`** (ou nome equivalente) **configurável**. Quando o consumo **aproximar o teto**, o sistema deve **alongar intervalos**, **adiar ou saltar** atualizações **não críticas**, e **registar** em logs ou métricas (alertas operacionais).
+- Limite **`MatchProviderSync:DailyRequestBudget`** **configurável**. Quando o consumo **aproximar o teto**, o sistema **adia** atualizações **não críticas** (verificação em `MatchFeedSyncHostedService.RunTickAsync`), e **regista** em logs ou métricas (alertas operacionais).
 
 ```mermaid
 flowchart TD
-  subgraph provider [SportsAPI Pro]
-    SAP[HTTP GETs match scores penalties]
+  subgraph provider [FlashScore via RapidAPI]
+    FS[HTTP GETs matches/details matches/penalties]
   end
   subgraph api [BigBall API]
-    Sync[MatchProviderSync worker]
+    Sync[MatchFeedSyncHostedService]
     DB[(Postgres Match)]
   end
-  Sync --> SAP
+  Sync --> FS
   Sync --> DB
   Client[Blazor WASM] -->|REST JWT| api
 ```
 
-Relação explícita: esta secção detalha o que §**4.6** resume como opções de **Hosted Service** / worker agendado.
+Relação explícita: esta secção detalha o que §**4.6** resume como `MatchFeedSyncHostedService` (`BackgroundService`) governado por `MatchProviderSyncOptions`.
 
 ---
 

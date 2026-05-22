@@ -3,6 +3,7 @@ using System;
 using BigBall.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BigBall.Api.Migrations
 {
     [DbContext(typeof(BigBallDbContext))]
-    partial class BigBallDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260522060954_AddLastLifecyclePhaseToMatch")]
+    partial class AddLastLifecyclePhaseToMatch
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -352,58 +355,6 @@ namespace BigBall.Api.Migrations
                     b.HasKey("DayUtc");
 
                     b.ToTable("provider_daily_api_usage", (string)null);
-                });
-
-            modelBuilder.Entity("BigBall.Domain.Entities.Team", b =>
-                {
-                    b.Property<string>("Code")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
-                        .HasColumnName("code");
-
-                    b.Property<string>("BadgeUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("badge_url");
-
-                    b.Property<string>("BadgeUrlSmall")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("badge_url_small");
-
-                    b.Property<string>("CountryImageUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("country_image_url");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("display_name");
-
-                    b.Property<string>("FlashScoreTeamId")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("flashscore_team_id");
-
-                    b.Property<string>("FlashScoreTeamUrl")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("flashscore_team_url");
-
-                    b.Property<string>("LastSource")
-                        .HasMaxLength(24)
-                        .HasColumnType("character varying(24)")
-                        .HasColumnName("last_source");
-
-                    b.Property<DateTime?>("LastUpdatedUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_updated_utc");
-
-                    b.HasKey("Code");
-
-                    b.ToTable("teams", (string)null);
                 });
 
             modelBuilder.Entity("BigBall.Domain.Entities.Match", b =>

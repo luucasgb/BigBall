@@ -8,7 +8,7 @@ namespace BigBall.Client.Core.DependencyInjection;
 public static class ClientCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers API clients (Auth/Pools/Matches/Predictions/Admin) + the 4 ViewModels.
+    /// Registers API clients (Auth/Pools/Matches/Predictions/Teams) + the 4 ViewModels.
     /// Consumers must additionally register <see cref="ITokenStore"/>,
     /// <see cref="IUserProfileStore"/>, and <see cref="IAppNavigator"/> implementations for their platform.
     /// </summary>
@@ -27,8 +27,8 @@ public static class ClientCoreServiceCollectionExtensions
         services.AddHttpClient<IPredictionsApi, PredictionsApiClient>(c => c.BaseAddress = apiBaseAddress)
                 .AddHttpMessageHandler<AuthMessageHandler>();
 
-        services.AddHttpClient<IAdminApi, AdminApiClient>(c => c.BaseAddress = apiBaseAddress)
-                .AddHttpMessageHandler<AuthMessageHandler>();
+        // Teams catalog is anonymous and cacheable — no auth handler.
+        services.AddHttpClient<ITeamsApi, TeamsApiClient>(c => c.BaseAddress = apiBaseAddress);
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<RegisterViewModel>();

@@ -1,3 +1,6 @@
+@using BigBall.Web.Shared.State
+@inject TeamBadgeCache TeamBadges
+
 <div class="match-list-item @(IsSelected ? "selected" : "") @(IsLast ? "last" : "")"
      @onclick="() => OnSelect.InvokeAsync()">
     <div class="match-list-item-time">
@@ -10,13 +13,13 @@
     </div>
     <div class="match-list-item-teams">
         <div class="match-list-item-team">
-            <Flag Code="@HomeCode" Size="24" />
+            <Flag Code="@HomeCode" Size="24" ImageUrl="@(TeamBadges.GetBadgeUrlSmall(HomeCode) ?? TeamBadges.GetBadgeUrl(HomeCode))" />
             <div class="match-list-item-team-name">@HomeName</div>
             @if (Status == "live") { <span class="match-list-item-score">@LiveHome</span> }
             @if (Status == "pred") { <span class="match-list-item-pred">@PredHome</span> }
         </div>
         <div class="match-list-item-team">
-            <Flag Code="@AwayCode" Size="24" />
+            <Flag Code="@AwayCode" Size="24" ImageUrl="@(TeamBadges.GetBadgeUrlSmall(AwayCode) ?? TeamBadges.GetBadgeUrl(AwayCode))" />
             <div class="match-list-item-team-name">@AwayName</div>
             @if (Status == "live") { <span class="match-list-item-score">@LiveAway</span> }
             @if (Status == "pred") { <span class="match-list-item-pred">@PredAway</span> }
@@ -47,6 +50,11 @@
     [Parameter] public bool IsSelected { get; set; }
     [Parameter] public bool IsLast { get; set; }
     [Parameter] public EventCallback OnSelect { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await TeamBadges.EnsureLoadedAsync();
+    }
 }
 
 <style>

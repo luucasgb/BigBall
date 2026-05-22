@@ -6,5 +6,5 @@ public sealed class SportsDataOptions
     public const string SectionName = "SportsData";
 
     /// <inheritdoc cref="SportsDataProviderNames"/>
-    public string Provider { get; set; } = SportsDataProviderNames.SportsApiPro;
+    public string Provider { get; set; } = SportsDataProviderNames.FlashScore;
 }

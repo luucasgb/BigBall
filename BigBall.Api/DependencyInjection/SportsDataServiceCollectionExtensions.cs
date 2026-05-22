@@ -1,5 +1,5 @@
 using BigBall.Api.Configuration;
-using BigBall.Api.Integrations.SportsApiPro;
+using BigBall.Api.Integrations.FlashScore;
 using BigBall.Domain.SportsData;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,51 +19,49 @@ public static class SportsDataServiceCollectionExtensions
 
         var provider = configuration[$"{SportsDataOptions.SectionName}:Provider"]?.Trim();
         if (string.IsNullOrEmpty(provider))
-            provider = SportsDataProviderNames.SportsApiPro;
+            provider = SportsDataProviderNames.FlashScore;
 
         switch (provider)
         {
-            case SportsDataProviderNames.SportsApiPro:
-                services.Configure<SportsApiProOptions>(
-                    configuration.GetSection(SportsApiProOptions.SectionName));
+            case SportsDataProviderNames.FlashScore:
+                services.Configure<FlashScoreOptions>(
+                    configuration.GetSection(FlashScoreOptions.SectionName));
 
-                services.AddTransient<SportsApiProApiKeyHandler>();
+                services.AddTransient<FlashScoreApiKeyHandler>();
 
-                services.AddHttpClient<SportsApiProSportsDataSource>((sp, client) =>
+                services.AddHttpClient<FlashScoreSportsDataSource>((sp, client) =>
                     {
-                        var opts = sp.GetRequiredService<IOptions<SportsApiProOptions>>().Value;
+                        var opts = sp.GetRequiredService<IOptions<FlashScoreOptions>>().Value;
                         var baseUrl = opts.BaseUrl.Trim();
                         if (string.IsNullOrEmpty(baseUrl))
-                            throw new InvalidOperationException("SportsApiPro:BaseUrl is required.");
+                            throw new InvalidOperationException("FlashScore:BaseUrl is required.");
 
                         client.BaseAddress = new Uri(baseUrl.EndsWith("/", StringComparison.Ordinal) ? baseUrl : baseUrl + "/");
                         client.Timeout = TimeSpan.FromSeconds(30);
                     })
-                    .AddHttpMessageHandler<SportsApiProApiKeyHandler>()
+                    .AddHttpMessageHandler<FlashScoreApiKeyHandler>()
                     .AddPolicyHandler(BuildResiliencePolicy());
 
                 services.AddTransient<ISportsDataSource>(sp =>
-                    sp.GetRequiredService<SportsApiProSportsDataSource>());
+                    sp.GetRequiredService<FlashScoreSportsDataSource>());
 
-                services.AddHttpClient<SportsApiProWorldCup2026ProbeService>((sp, client) =>
+                services.AddHttpClient<FlashScoreTeamSearchService>((sp, client) =>
                     {
-                        var opts = sp.GetRequiredService<IOptions<SportsApiProOptions>>().Value;
+                        var opts = sp.GetRequiredService<IOptions<FlashScoreOptions>>().Value;
                         var baseUrl = opts.BaseUrl.Trim();
                         if (string.IsNullOrEmpty(baseUrl))
-                            throw new InvalidOperationException("SportsApiPro:BaseUrl is required.");
+                            throw new InvalidOperationException("FlashScore:BaseUrl is required.");
 
-                        client.BaseAddress =
-                            new Uri(baseUrl.EndsWith("/", StringComparison.Ordinal) ? baseUrl : baseUrl + "/");
-                        // Many round fetches per click — allow headroom vs default 30s.
-                        client.Timeout = TimeSpan.FromSeconds(120);
+                        client.BaseAddress = new Uri(baseUrl.EndsWith("/", StringComparison.Ordinal) ? baseUrl : baseUrl + "/");
+                        client.Timeout = TimeSpan.FromSeconds(60);
                     })
-                    .AddHttpMessageHandler<SportsApiProApiKeyHandler>()
+                    .AddHttpMessageHandler<FlashScoreApiKeyHandler>()
                     .AddPolicyHandler(BuildResiliencePolicy());
                 break;
 
             default:
                 throw new InvalidOperationException(
-                    $"Unknown SportsData:Provider '{provider}'. Supported: {SportsDataProviderNames.SportsApiPro}.");
+                    $"Unknown SportsData:Provider '{provider}'. Supported: {SportsDataProviderNames.FlashScore}.");
         }
 
         return services;

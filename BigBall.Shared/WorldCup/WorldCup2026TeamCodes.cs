@@ -5,6 +5,29 @@ public static class WorldCup2026TeamCodes
 {
     private static readonly IReadOnlyDictionary<string, string> CodeToName;
 
+    /// <summary>FIFA 3-letter code → flagcdn.com identifier (ISO 3166-1 alpha-2, lowercase; UK subdivisions use `gb-eng`/`gb-sct`).</summary>
+    private static readonly Dictionary<string, string> ToFlagCdn = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["MEX"] = "mx", ["RSA"] = "za", ["KOR"] = "kr", ["CZE"] = "cz",
+        ["CAN"] = "ca", ["BIH"] = "ba", ["QAT"] = "qa", ["SUI"] = "ch",
+        ["BRA"] = "br", ["MAR"] = "ma", ["HAI"] = "ht", ["SCO"] = "gb-sct",
+        ["USA"] = "us", ["PAR"] = "py", ["AUS"] = "au", ["TUR"] = "tr",
+        ["GER"] = "de", ["CUW"] = "cw", ["CIV"] = "ci", ["ECU"] = "ec",
+        ["NED"] = "nl", ["JPN"] = "jp", ["SWE"] = "se", ["TUN"] = "tn",
+        ["BEL"] = "be", ["EGY"] = "eg", ["IRN"] = "ir", ["NZL"] = "nz",
+        ["ESP"] = "es", ["CPV"] = "cv", ["KSA"] = "sa", ["URU"] = "uy",
+        ["FRA"] = "fr", ["SEN"] = "sn", ["IRQ"] = "iq", ["NOR"] = "no",
+        ["ARG"] = "ar", ["ALG"] = "dz", ["AUT"] = "at", ["JOR"] = "jo",
+        ["POR"] = "pt", ["COD"] = "cd", ["UZB"] = "uz", ["COL"] = "co",
+        ["ENG"] = "gb-eng", ["CRO"] = "hr", ["GHA"] = "gh", ["PAN"] = "pa",
+    };
+
+    /// <summary>flagcdn.com SVG URL for a FIFA code, or <c>null</c> for placeholder slots (e.g. "W37").</summary>
+    public static string? ToFlagUrl(string? code)
+        => code is not null && ToFlagCdn.TryGetValue(code.Trim(), out var iso)
+            ? $"https://flagcdn.com/{iso}.svg"
+            : null;
+
     private static readonly Dictionary<string, string> ByName = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Mexico"] = "MEX",
@@ -67,6 +90,9 @@ public static class WorldCup2026TeamCodes
 
         CodeToName = d;
     }
+
+    /// <summary>All canonical 3-letter codes for the WC2026 roster, in insertion order.</summary>
+    public static IReadOnlyList<string> AllCodes() => ByName.Values.ToList();
 
     /// <summary>Short label for list UI (full country name or slot code).</summary>
     public static string ToDisplayName(string code)

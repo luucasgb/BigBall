@@ -101,10 +101,10 @@ try
                 m => m.ExternalKey != null && m.ExternalKey.StartsWith("wc2026-"));
             if (!hasImported)
             {
-                var path = Path.Combine(AppContext.BaseDirectory, "Data", "Fixtures", "worldcup-2026.json");
+                var path = Path.Combine(AppContext.BaseDirectory, "Data", "worldcup-2026.json");
                 if (!File.Exists(path))
                 {
-                    path = Path.Combine(env.ContentRootPath, "Data", "Fixtures", "worldcup-2026.json");
+                    path = Path.Combine(env.ContentRootPath, "Data", "worldcup-2026.json");
                 }
 
                 if (File.Exists(path))

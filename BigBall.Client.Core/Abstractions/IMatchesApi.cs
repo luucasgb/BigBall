@@ -10,4 +10,6 @@ public interface IMatchesApi
         CancellationToken ct = default);
 
     Task<MatchDetailDto> GetMatchAsync(Guid matchId, Guid poolId, CancellationToken ct = default);
+
+    Task<IReadOnlyList<PoolPredictionDto>> GetMyPoolPredictionsAsync(Guid matchId, CancellationToken ct = default);
 }

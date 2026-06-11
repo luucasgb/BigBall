@@ -83,7 +83,8 @@
         /* Inherits .bb-dcard styles from parent */
     }
 
-    .pools-table-th-right {
+    /* Higher specificity than the global `.bb-table th` (which forces text-align: left). */
+    .bb-table th.pools-table-th-right {
         text-align: right;
     }
 

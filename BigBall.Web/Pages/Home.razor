@@ -16,9 +16,9 @@
                 <div class="home-col-main">
                     <div class="bb-dcard">
                         <FeaturedMatchCard Next="@VM.FeaturedNextMatch"
-                                          Featured="@VM.FeaturedPool"
+                                          PoolPredictions="@VM.FeaturedPoolPredictions"
                                           IsBusy="@VM.IsBusy"
-                                          OnPredictionClick="() => VM.OpenFeaturedPredictionCommand.Execute(null)" />
+                                          OnPredictionClick="poolId => VM.OpenPredictionCommand.Execute(poolId)" />
                     </div>
                     <div class="bb-dcard">
                         <PoolsTable Pools="@VM.Pools"

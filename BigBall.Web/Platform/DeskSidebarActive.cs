@@ -19,8 +19,7 @@ public static class DeskSidebarActive
         {
             "calendar" => "calendar",
             "profile" => "profile",
-            "predict" => "predict",
-            "pools" => path.Contains("/predict/", StringComparison.OrdinalIgnoreCase) ? "predict" : "dashboard",
+            "about" => "about",
             _ => "dashboard",
         };
     }

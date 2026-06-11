@@ -29,6 +29,12 @@ public sealed class MatchesApiClient : IMatchesApi
         return await response.ReadRequiredAsync<MatchDetailDto>(ct).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<PoolPredictionDto>> GetMyPoolPredictionsAsync(Guid matchId, CancellationToken ct = default)
+    {
+        using var response = await _http.GetAsync($"api/matches/{matchId}/my-pool-predictions", ct).ConfigureAwait(false);
+        return await response.ReadRequiredAsync<List<PoolPredictionDto>>(ct).ConfigureAwait(false);
+    }
+
     private static DateTime NormalizeUtc(DateTime t) =>
         t.Kind == DateTimeKind.Utc ? t : DateTime.SpecifyKind(t.ToUniversalTime(), DateTimeKind.Utc);
 }

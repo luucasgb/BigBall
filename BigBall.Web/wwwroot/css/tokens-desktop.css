@@ -109,6 +109,8 @@
   cursor: pointer;
 }
 .bb-topbar-btn:hover { color: var(--fg); background: var(--bg-elev-2); }
+.bb-topbar-btn:disabled { opacity: 0.4; cursor: default; }
+.bb-topbar-btn:disabled:hover { color: var(--fg-2); background: var(--chip-bg); }
 .bb-topbar-btn.primary {
   background: var(--brand-strong);
   color: var(--brand-ink);

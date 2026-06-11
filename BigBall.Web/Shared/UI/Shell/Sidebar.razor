@@ -20,10 +20,6 @@
                     Label="Calendário"
                     Href="/calendar"
                     IsActive="@(Active == "calendar")" />
-    <SidebarNavItem IconPath="@IconPaths.Whistle"
-                    Label="Palpitar"
-                    Href="/predict"
-                    IsActive="@(Active == "predict")" />
     <SidebarNavItem IconPath="@IconPaths.Globe"
                     Label="Descobrir"
                     Title="Em breve" />
@@ -33,6 +29,12 @@
                     Label="Perfil"
                     Href="/profile"
                     IsActive="@(Active == "profile")" />
+
+    <SidebarNavSection>Big Ball</SidebarNavSection>
+    <SidebarNavItem IconPath="@IconPaths.Info"
+                    Label="Sobre"
+                    Href="/about"
+                    IsActive="@(Active == "about")" />
 
     <SidebarUserFooter Name="@ResolvedUserName" Email="@ResolvedUserEmail" AvatarUrl="@ResolvedAvatarUrl" />
 </SidebarFrame>

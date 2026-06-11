@@ -123,6 +123,9 @@ public class PredictViewModelTests
             CallCount++;
             return Task.FromResult(_match);
         }
+
+        public Task<IReadOnlyList<PoolPredictionDto>> GetMyPoolPredictionsAsync(Guid matchId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<PoolPredictionDto>>([]);
     }
 
     private sealed class FakePredictionsApi : IPredictionsApi

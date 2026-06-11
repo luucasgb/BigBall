@@ -11,10 +11,9 @@
         <PageHeader Title="Calendário"
                     Eyebrow="@_headerEyebrow">
             <Actions>
-                <button type="button" class="bb-topbar-btn bb-topbar-btn-icon"><Icon Path="@IconPaths.ChevronL" Size="18" /></button>
-                <button type="button" class="bb-topbar-btn bb-topbar-btn-icon"><Icon Path="@IconPaths.Chevron" Size="18" /></button>
-                <button type="button" class="bb-topbar-btn">Hoje</button>
-                <button type="button" class="bb-topbar-btn"><Icon Path="@IconPaths.Filter" Size="16" /> Bolão</button>
+                <button type="button" class="bb-topbar-btn bb-topbar-btn-icon" disabled="@(!CanGoPrevious)" @onclick="GoToPreviousDay"><Icon Path="@IconPaths.ChevronL" Size="18" /></button>
+                <button type="button" class="bb-topbar-btn bb-topbar-btn-icon" disabled="@(!CanGoNext)" @onclick="GoToNextDay"><Icon Path="@IconPaths.Chevron" Size="18" /></button>
+                <button type="button" class="bb-topbar-btn" @onclick="GoToToday">Hoje</button>
             </Actions>
         </PageHeader>
 
@@ -91,6 +90,7 @@
                                 {
                                     <PoolSelectionItem Name="@pool.Name"
                                                        Sub="@pool.Sub"
+                                                       Prediction="@(pool.Prediction is { } s ? $"{s.Home} × {s.Away}" : null)"
                                                        Selected="@pool.Selected"
                                                        OnToggle="() => pool.Selected = !pool.Selected" />
                                 }
@@ -113,10 +113,11 @@
         }
 
 @code {
-    private static readonly CultureInfo PtBr = new("pt-BR");
-
     private static readonly DateTime RangeStart = new(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime RangeEnd = new(2026, 7, 20, 23, 59, 59, DateTimeKind.Utc);
+
+    // The 2026 World Cup knockout stage begins on 28 Jun; earlier days are still group stage.
+    private static readonly DateOnly KnockoutStart = new(2026, 6, 28);
 
     private IReadOnlyList<MatchCalendarRowDto> _loaded = Array.Empty<MatchCalendarRowDto>();
     private List<DayPicker.DayPickerItem> _dayItemList = new();
@@ -156,6 +157,7 @@
         public string Name { get; init; } = "";
         public string Sub { get; init; } = "";
         public bool Selected { get; set; }
+        public ScoreDto? Prediction { get; set; }
     }
 
     private readonly List<PoolSelection> _poolSelections = new();
@@ -168,6 +170,34 @@
     protected override async Task OnInitializedAsync()
     {
         await Task.WhenAll(LoadAsync(), LoadMyPoolsAsync());
+        await RefreshPoolPredictionsAsync();
+    }
+
+    private async Task RefreshPoolPredictionsAsync()
+    {
+        foreach (var sel in _poolSelections)
+        {
+            sel.Prediction = null;
+        }
+
+        if (ActiveMatch is not { } am || _poolSelections.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var preds = await MatchesApi.GetMyPoolPredictionsAsync(am.Id).ConfigureAwait(false);
+            var byPool = preds.ToDictionary(p => p.PoolId, p => p.Prediction);
+            foreach (var sel in _poolSelections)
+            {
+                sel.Prediction = byPool.TryGetValue(sel.PoolId, out var score) ? score : null;
+            }
+        }
+        catch (Exception)
+        {
+            // Unauthenticated or API error: rows fall back to "sem palpite".
+        }
     }
 
     private async Task LoadMyPoolsAsync()
@@ -234,12 +264,46 @@
         UpdateChrome();
     }
 
-    private Task OnDayChanged(string dayLabel)
+    private async Task OnDayChanged(string dayLabel)
     {
         SelectedDay = dayLabel;
         RebuildViewMatches();
         UpdateChrome();
-        return Task.CompletedTask;
+        await RefreshPoolPredictionsAsync();
+    }
+
+    private int SelectedDayIndex => _dayItemList.FindIndex(d => d.Label == SelectedDay);
+
+    private bool CanGoPrevious => SelectedDayIndex > 0;
+    private bool CanGoNext => SelectedDayIndex >= 0 && SelectedDayIndex < _dayItemList.Count - 1;
+
+    private async Task GoToPreviousDay()
+    {
+        if (CanGoPrevious)
+        {
+            await OnDayChanged(_dayItemList[SelectedDayIndex - 1].Label);
+        }
+    }
+
+    private async Task GoToNextDay()
+    {
+        if (CanGoNext)
+        {
+            await OnDayChanged(_dayItemList[SelectedDayIndex + 1].Label);
+        }
+    }
+
+    private async Task GoToToday()
+    {
+        if (_dayItemList.Count == 0)
+        {
+            return;
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        // Snap to today's matches when available, otherwise fall back to the first match day.
+        var target = _dayItemList.FirstOrDefault(d => d.Label == today)?.Label ?? _dayItemList[0].Label;
+        await OnDayChanged(target);
     }
 
     private void RebuildViewMatches()
@@ -288,8 +352,9 @@
             return;
         }
 
-        _headerEyebrow = d.ToString("MMMM yyyy", PtBr) + " · fase de grupos / mata-mata";
-        _listTitle = $"Jogos · {d.Day:00} {d.ToString("MMM", PtBr).TrimEnd('.')}";
+        var stagePhase = d >= KnockoutStart ? "mata-mata" : "fase de grupos";
+        _headerEyebrow = $"{PtDates.FullMonth(d.Month)} {d.Year} · {stagePhase}";
+        _listTitle = $"Jogos · {d.Day:00} {PtDates.AbbreviatedMonth(d.Month)}";
         var live = _viewMatches.Count(m => m.Status == "live");
         _listSubtitle = $"{_viewMatches.Count} jogo{(_viewMatches.Count == 1 ? "" : "s")}" + (live > 0 ? $" · {live} ao vivo" : "");
     }
@@ -297,18 +362,16 @@
     private static MatchItem MapToItem(MatchCalendarRowDto m)
     {
         var local = ToLocal(m.KickoffUtc);
-        var dayAbbr = PtBr.DateTimeFormat.AbbreviatedDayNames[(int)local.DayOfWeek].TrimEnd('.');
-        var dayPart = string.IsNullOrEmpty(dayAbbr) ? local.ToString("ddd", PtBr) : dayAbbr;
-        var center = $"{dayPart} {local:dd} {local:MMM} · {local:HH:mm}".Trim();
+        var center = $"{PtDates.AbbreviatedDay(local.DayOfWeek)} {local:dd} {PtDates.AbbreviatedMonth(local.Month)} · {local:HH:mm}";
         return new MatchItem
         {
             Id = m.Id,
             Time = local.ToString("HH:mm", CultureInfo.InvariantCulture),
             HomeCode = m.HomeCode,
             AwayCode = m.AwayCode,
-            HomeName = WorldCup2026TeamCodes.ToDisplayName(m.HomeCode),
-            AwayName = WorldCup2026TeamCodes.ToDisplayName(m.AwayCode),
-            Phase = string.IsNullOrEmpty(m.GroupLabel) ? m.Phase : m.GroupLabel!,
+            HomeName = TeamNames.Display(m.HomeCode),
+            AwayName = TeamNames.Display(m.AwayCode),
+            Phase = MatchLabels.ForMatch(m.Phase, m.GroupLabel),
             Status = MapUiStatus(m.Status),
             KickoffUtc = AsUtc(m.KickoffUtc),
             CenterDateLine = center,
@@ -341,15 +404,10 @@
         return DateOnly.FromDateTime(ToLocal(kickoffUtc));
     }
 
-    private static string DayNamePt(DateOnly d)
-    {
-        var dt = d.ToDateTime(TimeOnly.MinValue);
-        // Abbreviated day names: seg., ter. → use 3 letters uppercase
-        var abbr = PtBr.DateTimeFormat.AbbreviatedDayNames[(int)dt.DayOfWeek].TrimEnd('.');
-        return abbr.Length > 0 ? abbr.ToUpperInvariant() : d.ToString("ddd", PtBr).ToUpperInvariant();
-    }
+    private static string DayNamePt(DateOnly d) =>
+        PtDates.AbbreviatedDay(d.ToDateTime(TimeOnly.MinValue).DayOfWeek).ToUpperInvariant();
 
-    private void SelectMatch(MatchItem match)
+    private async Task SelectMatch(MatchItem match)
     {
         foreach (var m in _viewMatches)
         {
@@ -357,12 +415,17 @@
         }
 
         match.IsSelected = true;
+        await RefreshPoolPredictionsAsync();
     }
 
     private void ClearPrediction()
     {
         PredHome = 0;
         PredAway = 0;
+        foreach (var sel in _poolSelections)
+        {
+            sel.Selected = false;
+        }
     }
 
     private void SavePrediction() { }

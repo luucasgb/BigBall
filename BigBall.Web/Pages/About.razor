@@ -1,0 +1,85 @@
+@page "/about"
+@layout DesktopAppLayout
+
+<DesktopTopbar />
+<div class="bb-content">
+    <PageHeader Title="Sobre" Eyebrow="Big Ball" />
+
+    <div class="about-layout">
+        <div class="about-col">
+            <div class="bb-dcard about-card">
+                <div class="about-card-header">
+                    <div class="bb-dcard-title">Como funciona</div>
+                </div>
+                <ol class="about-steps">
+                    <li>Crie um bolão ou entre em um existente usando o código de convite.</li>
+                    <li>No <strong>Calendário</strong>, selecione uma partida e registre seu palpite de placar.</li>
+                    <li>Cada partida fecha no horário do apito inicial — depois disso o palpite não pode mais ser editado.</li>
+                    <li>Conforme os resultados saem, sua pontuação e posição no ranking são atualizadas automaticamente.</li>
+                </ol>
+            </div>
+
+            <div class="bb-dcard about-card">
+                <div class="about-card-header">
+                    <div class="bb-dcard-title">Critérios de desempate</div>
+                </div>
+                <p class="about-intro">Quando dois participantes têm a mesma pontuação total, a ordem é decidida nesta sequência:</p>
+                <ol class="about-steps">
+                    <li>Maior número de <strong>placares exatos</strong> (acertos de 20 pts).</li>
+                    <li>Maior número de <strong>vencedor + diferença</strong> (acertos de 16 pts).</li>
+                    <li>Maior número de <strong>bônus de pênalti</strong> (mata-mata).</li>
+                    <li>Persistindo o empate, os participantes <strong>compartilham a mesma posição</strong> no ranking.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="about-col">
+            <ScoringRulesCard />
+        </div>
+    </div>
+</div>
+
+<style>
+    .about-layout {
+        padding: 0 40px 40px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        max-width: 960px;
+    }
+
+    .about-col {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .about-card-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .about-intro {
+        margin: 0;
+        padding: 16px 24px 0;
+        font-size: 14px;
+        color: var(--fg-2);
+        line-height: 1.5;
+    }
+
+    .about-steps {
+        margin: 0;
+        padding: 16px 24px 16px 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        font-size: 14px;
+        color: var(--fg-2);
+        line-height: 1.5;
+    }
+
+    .about-steps strong {
+        color: var(--fg);
+        font-weight: 600;
+    }
+</style>

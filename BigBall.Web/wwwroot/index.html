@@ -26,6 +26,31 @@
         <a class="dismiss">🗙</a>
     </div>
     <script>window.bigBallCopyToClipboard = (t) => navigator.clipboard.writeText(t);</script>
+    <script>
+        window.bigBallDayPicker = {
+            update(viewport) {
+                if (!viewport) return;
+                const wrap = viewport.parentElement;
+                if (!wrap) return;
+                const max = viewport.scrollWidth - viewport.clientWidth;
+                wrap.classList.toggle('can-scroll-left', viewport.scrollLeft > 4);
+                wrap.classList.toggle('can-scroll-right', viewport.scrollLeft < max - 4);
+            },
+            center(viewport) {
+                if (!viewport) return;
+                const active = viewport.querySelector('.day-picker-tile.active');
+                if (active) {
+                    active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+                if (!viewport.dataset.bbBound) {
+                    viewport.dataset.bbBound = '1';
+                    viewport.addEventListener('scroll', () => window.bigBallDayPicker.update(viewport), { passive: true });
+                }
+                // Refresh the edge fades once the smooth scroll settles.
+                setTimeout(() => window.bigBallDayPicker.update(viewport), 400);
+            }
+        };
+    </script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 

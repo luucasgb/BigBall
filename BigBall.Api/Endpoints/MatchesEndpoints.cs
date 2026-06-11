@@ -98,6 +98,33 @@ public static class MatchesEndpoints
         })
         .WithName("GetMatchDetail");
 
+        group.MapGet("/{matchId:guid}/my-pool-predictions", async (Guid matchId, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+
+            var poolIds = await db.PoolMemberships
+                .AsNoTracking()
+                .Where(m => m.UserId == userId)
+                .Select(m => m.PoolId)
+                .ToListAsync(ct);
+
+            var preds = await db.Predictions
+                .AsNoTracking()
+                .Where(p => p.UserId == userId && p.MatchId == matchId && poolIds.Contains(p.PoolId))
+                .ToListAsync(ct);
+
+            var rows = poolIds
+                .Select(pid =>
+                {
+                    var pred = preds.FirstOrDefault(p => p.PoolId == pid);
+                    return new PoolPredictionDto(pid, pred is null ? null : new ScoreDto(pred.Home, pred.Away));
+                })
+                .ToList();
+
+            return Results.Ok(rows);
+        })
+        .WithName("GetMyPoolPredictionsForMatch");
+
         return app;
     }
 

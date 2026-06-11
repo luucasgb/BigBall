@@ -25,7 +25,18 @@ public partial class HomeViewModel : ViewModelBase
 
     public NextMatchDto? FeaturedNextMatch => FeaturedPool?.NextMatch;
 
-    partial void OnFeaturedPoolChanged(MyPoolDto? value) => OnPropertyChanged(nameof(FeaturedNextMatch));
+    public IReadOnlyList<FeaturedPoolPrediction> FeaturedPoolPredictions =>
+        FeaturedNextMatch is not { } match
+            ? Array.Empty<FeaturedPoolPrediction>()
+            : Pools.Where(p => p.NextMatch?.Id == match.Id)
+                   .Select(p => new FeaturedPoolPrediction(p.Id, p.Name, p.NextMatch!.MyPrediction))
+                   .ToList();
+
+    partial void OnFeaturedPoolChanged(MyPoolDto? value)
+    {
+        OnPropertyChanged(nameof(FeaturedNextMatch));
+        OnPropertyChanged(nameof(FeaturedPoolPredictions));
+    }
 
     [RelayCommand]
     public Task LoadAsync(CancellationToken ct) => RunAsync(async token =>
@@ -44,9 +55,11 @@ public partial class HomeViewModel : ViewModelBase
     private void OpenPool(MyPoolDto pool) => _navigator.NavigateTo($"/pools/{pool.Id}");
 
     [RelayCommand]
-    private void OpenFeaturedPrediction()
+    private void OpenPrediction(Guid poolId)
     {
-        if (FeaturedPool is null || FeaturedPool.NextMatch is null) return;
-        _navigator.NavigateTo($"/pools/{FeaturedPool.Id}/predict/{FeaturedPool.NextMatch.Id}");
+        if (FeaturedNextMatch is not { } match) return;
+        _navigator.NavigateTo($"/pools/{poolId}/predict/{match.Id}");
     }
 }
+
+public sealed record FeaturedPoolPrediction(Guid PoolId, string PoolName, ScoreDto? Prediction);

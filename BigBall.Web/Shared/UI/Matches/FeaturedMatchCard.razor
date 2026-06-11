@@ -2,10 +2,10 @@
 @inject TeamBadgeCache TeamBadges
 
 <div class="featured-match-card">
-    @if (Next is not null && Featured is not null)
+    @if (Next is not null)
     {
         <div class="featured-match-card-header">
-            <span class="bb-chip">Próximo · @Featured.Name</span>
+            <span class="bb-chip">Próximo jogo</span>
             <div class="featured-match-card-kickoff">
                 <PredictionLockCountdownChip KickoffUtc="NextMatchKickoff" />
             </div>
@@ -17,11 +17,14 @@
                 <div class="featured-match-team-code">@Next.HomeCode</div>
             </div>
             <div class="featured-match-center">
-                <div class="featured-match-datetime">@Next.KickoffUtc.ToLocalTime().ToString("ddd dd · HH:mm") BRT</div>
+                <div class="featured-match-datetime">@NextDateLine</div>
                 <div class="featured-match-vs">vs</div>
-                @if (Next.GroupLabel is { } grp)
+                @{
+                    var grpLabel = MatchLabels.GroupLabel((string?)Next.GroupLabel);
+                }
+                @if (!string.IsNullOrEmpty(grpLabel))
                 {
-                    <div class="featured-match-group">@grp</div>
+                    <div class="featured-match-group">@grpLabel</div>
                 }
             </div>
             <div class="featured-match-team">
@@ -30,23 +33,29 @@
             </div>
         </div>
 
-        <div class="featured-match-card-footer">
-            @if (Next.MyPrediction is { } pred)
+        <div class="featured-match-card-footer featured-match-pools">
+            @foreach (dynamic pp in PoolPredictions ?? Array.Empty<object>())
             {
-                <div class="featured-match-prediction-label">Seu palpite</div>
-                <ScoreBox Value="@pred.Home" Size="sm" Editable />
-                <span class="featured-match-separator">×</span>
-                <ScoreBox Value="@pred.Away" Size="sm" Editable />
+                <div class="featured-match-pool-row">
+                    <span class="featured-match-pool-name">@pp.PoolName</span>
+                    <div class="featured-match-pool-scores">
+                        @if (pp.Prediction is { } pred)
+                        {
+                            <ScoreBox Value="@pred.Home" Size="sm" Editable />
+                            <span class="featured-match-separator">×</span>
+                            <ScoreBox Value="@pred.Away" Size="sm" Editable />
+                        }
+                        else
+                        {
+                            <span class="featured-match-separator">—</span>
+                        }
+                    </div>
+                    <button class="bb-topbar-btn primary featured-match-pool-action"
+                            @onclick="() => OnPredictionClick.InvokeAsync((Guid)pp.PoolId)">
+                        @(IsLocked ? "Ver" : pp.Prediction is null ? "Palpitar" : "Ver / editar")
+                    </button>
+                </div>
             }
-            else
-            {
-                <div class="featured-match-prediction-label">Você ainda não palpitou neste jogo.</div>
-            }
-            <div class="featured-match-footer-spacer"></div>
-            <button class="bb-topbar-btn primary"
-                    @onclick="() => OnPredictionClick.InvokeAsync(null)">
-                @(Next.MyPrediction is null ? "Palpitar" : "Ver / editar")
-            </button>
         </div>
     }
     else if (IsBusy)
@@ -65,11 +74,22 @@
 
 @code {
     [Parameter] public dynamic? Next { get; set; }
-    [Parameter] public dynamic? Featured { get; set; }
+    [Parameter] public System.Collections.IEnumerable? PoolPredictions { get; set; }
     [Parameter] public bool IsBusy { get; set; }
-    [Parameter] public EventCallback OnPredictionClick { get; set; }
+    [Parameter] public EventCallback<Guid> OnPredictionClick { get; set; }
 
     private DateTime NextMatchKickoff => Next is null ? default : (DateTime)Next.KickoffUtc;
+    private bool IsLocked => Next is not null && (DateTime)Next.KickoffUtc <= DateTime.UtcNow;
+
+    private string NextDateLine
+    {
+        get
+        {
+            if (Next is null) return "";
+            var local = ((DateTime)Next.KickoffUtc).ToLocalTime();
+            return $"{PtDates.AbbreviatedDay(local.DayOfWeek)} {local:dd} · {local:HH:mm} BRT";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,17 +180,35 @@
         gap: 12px;
     }
 
-    .featured-match-prediction-label {
+    .featured-match-pools {
+        display: grid;
+        grid-template-columns: max-content max-content 1fr;
+        align-items: center;
+        gap: 10px 28px;
+    }
+
+    .featured-match-pool-row {
+        display: contents;
+    }
+
+    .featured-match-pool-name {
         font-size: 13px;
         color: var(--fg-2);
+        font-weight: 500;
+    }
+
+    .featured-match-pool-scores {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .featured-match-pool-action {
+        justify-self: end;
     }
 
     .featured-match-separator {
         color: var(--fg-3);
-    }
-
-    .featured-match-footer-spacer {
-        flex: 1;
     }
 
     .featured-match-card-empty {

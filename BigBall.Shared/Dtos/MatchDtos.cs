@@ -48,3 +48,6 @@ public sealed record MatchDetailDto(
     PredictionDto? MyPrediction);
 
 public sealed record ScoreDto(int Home, int Away);
+
+/// <summary>A user's prediction for one match within a single pool (null when not yet predicted).</summary>
+public sealed record PoolPredictionDto(Guid PoolId, ScoreDto? Prediction);

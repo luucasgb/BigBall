@@ -29,4 +29,5 @@ public static class IconPaths
     public const string Search   = "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m21 21-4-4\"/>";
     public const string Filter   = "<path d=\"M3 5h18M7 12h10M10 19h4\"/>";
     public const string Sparkle  = "<path d=\"M12 3v1m0 16v1M4.22 4.22l.71.71m12.02 12.02.71.71M3 12h1m16 0h1M4.22 19.78l.71-.71M18.36 5.64l.71-.71\"/><circle cx=\"12\" cy=\"12\" r=\"4\"/>";
+    public const string Info     = "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 11v5\"/><path d=\"M12 7.5v.01\"/>";
 }

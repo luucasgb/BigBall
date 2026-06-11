@@ -49,7 +49,7 @@ Host=aws-0-<regiao>.pooler.supabase.com;Port=5432;Database=postgres;Username=pos
 1. Crie conta em [dash.cloudflare.com](https://dash.cloudflare.com).
 2. Crie o projeto Pages (uma única vez, via direct upload): **Workers & Pages → Create → Pages → Upload assets**, nome `bigball` (se o nome estiver ocupado, escolha outro e atualize `CLOUDFLARE_PAGES_PROJECT` em `.github/workflows/deploy-web.yml`). Pode subir um arquivo qualquer só para criar o projeto — o workflow sobrescreve no primeiro deploy.
 3. Crie um API token em **My Profile → API Tokens → Create Token**, com a permissão **Account → Cloudflare Pages → Edit**.
-4. No GitHub (`Settings → Secrets and variables → Actions → Secrets`), crie:
+4. No GitHub (`Settings → Secrets and variables → Actions`), crie em **Secrets** ou **Variables**:
    - `CLOUDFLARE_API_TOKEN` — o token do passo anterior
    - `CLOUDFLARE_ACCOUNT_ID` — visível na URL do dashboard ou em Workers & Pages → Overview
 5. Edite `BigBall.Web/wwwroot/appsettings.Production.json` com a URL do Railway (passo 2.4), **com barra final**:

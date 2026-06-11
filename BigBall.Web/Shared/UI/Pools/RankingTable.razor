@@ -15,8 +15,11 @@
                 <th class="col-member">Membro</th>
                 <th class="col-score">20 pts</th>
                 <th class="col-score">16 pts</th>
+                <th class="col-score">15 pts</th>
+                <th class="col-score">10 pts</th>
+                <th class="col-score">5 pts</th>
                 <th class="col-score">+3 pen.</th>
-                <th class="col-trend">Últ.</th>
+                <th class="col-trend">Última</th>
                 <th class="col-total">Total</th>
             </tr>
         </thead>
@@ -50,6 +53,9 @@
                     </td>
                     <td class="col-score @(row.Tier20Count >= 3 ? "score-highlight" : "")">@row.Tier20Count×</td>
                     <td class="col-score">@row.Tier16Count×</td>
+                    <td class="col-score">@row.Tier15Count×</td>
+                    <td class="col-score">@row.Tier10Count×</td>
+                    <td class="col-score">@row.Tier5Count×</td>
                     <td class="col-score">@row.PenaltyBonusCount×</td>
                     <td class="col-trend">
                         <span class="@(row.TrendLastMatch > 0 ? "trend-positive" : "trend-neutral")">
@@ -119,27 +125,35 @@
     }
 
     .ranking-table-container .bb-table th {
-        padding: 12px;
+        padding: 12px 8px;
         text-align: left;
         font-weight: 600;
-        font-size: 12px;
+        font-size: 11px;
         color: var(--fg-3);
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
     }
 
     .ranking-table-container .bb-table td {
-        padding: 12px;
+        padding: 12px 8px;
         color: var(--fg-2);
+        white-space: nowrap;
     }
 
     .col-rank {
-        width: 50px;
+        width: 44px;
         padding-left: 24px !important;
     }
 
     .col-member {
-        flex: 1;
+        width: 100%;
+    }
+
+    /* Colunas numéricas: largura compacta e uniforme para caberem harmonicamente. */
+    .col-score,
+    .col-trend {
+        width: 56px;
     }
 
     /* Colunas numéricas alinhadas à direita — cabeçalho (com especificidade > global) e células. */
@@ -154,11 +168,11 @@
 
     .col-total {
         padding-right: 24px !important;
-        width: 80px;
+        width: 72px;
     }
 
     /* Row styling */
-    .ranking-table-container :deep tr.is-me {
+    .ranking-table-container tr.is-me {
         background: color-mix(in oklab, var(--brand-strong) 6%, transparent);
     }
 

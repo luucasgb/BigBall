@@ -27,7 +27,7 @@ public sealed class RankingService
             .ToListAsync(ct);
 
         // Sequential: one DbContext cannot run overlapping queries (Task.WhenAll caused 500s).
-        var rowsRaw = new List<(Guid UserId, string Name, int Points, int Tier20, int Tier16, int Bonus, int Trend, int PredictedGames, bool IsMe)>(memberIds.Count);
+        var rowsRaw = new List<(Guid UserId, string Name, int Points, int Tier20, int Tier16, int Tier15, int Tier10, int Tier5, int Bonus, int Trend, int PredictedGames, bool IsMe)>(memberIds.Count);
         foreach (var userId in memberIds)
         {
             rowsRaw.Add(await BuildRowAsync(poolId, userId, currentUserId, ct));
@@ -43,11 +43,11 @@ public sealed class RankingService
         return AssignRanksAndTies(ordered);
     }
 
-    private async Task<(Guid UserId, string Name, int Points, int Tier20, int Tier16, int Bonus, int Trend, int PredictedGames, bool IsMe)> BuildRowAsync(
+    private async Task<(Guid UserId, string Name, int Points, int Tier20, int Tier16, int Tier15, int Tier10, int Tier5, int Bonus, int Trend, int PredictedGames, bool IsMe)> BuildRowAsync(
         Guid poolId, Guid userId, Guid currentUserId, CancellationToken ct)
     {
         var profile = await _db.Profiles.FirstAsync(p => p.Id == userId, ct);
-        int total = 0, t20 = 0, t16 = 0, bonus = 0, trend = 0;
+        int total = 0, t20 = 0, t16 = 0, t15 = 0, t10 = 0, t5 = 0, bonus = 0, trend = 0;
 
         var predictions = await _db.Predictions
             .Where(p => p.UserId == userId && p.PoolId == poolId)
@@ -67,6 +67,9 @@ public sealed class RankingService
             total += result.Total;
             if (result.Tier == 20) t20++;
             if (result.Tier == 16) t16++;
+            if (result.Tier == 15) t15++;
+            if (result.Tier == 10) t10++;
+            if (result.Tier == 5) t5++;
             if (result.Bonus > 0) bonus++;
             if (lastKickoff is null || match.KickoffUtc > lastKickoff.Value)
             {
@@ -75,11 +78,11 @@ public sealed class RankingService
             }
         }
 
-        return (userId, profile.DisplayName, total, t20, t16, bonus, trend, predictedGames, userId == currentUserId);
+        return (userId, profile.DisplayName, total, t20, t16, t15, t10, t5, bonus, trend, predictedGames, userId == currentUserId);
     }
 
     private static IReadOnlyList<RankingRowDto> AssignRanksAndTies(
-        List<(Guid UserId, string Name, int Points, int Tier20, int Tier16, int Bonus, int Trend, int PredictedGames, bool IsMe)> ordered)
+        List<(Guid UserId, string Name, int Points, int Tier20, int Tier16, int Tier15, int Tier10, int Tier5, int Bonus, int Trend, int PredictedGames, bool IsMe)> ordered)
     {
         var result = new List<RankingRowDto>(ordered.Count);
         int currentTieGroup = 0;
@@ -109,6 +112,9 @@ public sealed class RankingService
                 row.Points,
                 row.Tier20,
                 row.Tier16,
+                row.Tier15,
+                row.Tier10,
+                row.Tier5,
                 row.Bonus,
                 row.Trend,
                 row.PredictedGames,
@@ -119,8 +125,8 @@ public sealed class RankingService
     }
 
     private static bool AreTiedOnAllCounters(
-        (Guid UserId, string Name, int Points, int Tier20, int Tier16, int Bonus, int Trend, int PredictedGames, bool IsMe) a,
-        (Guid UserId, string Name, int Points, int Tier20, int Tier16, int Bonus, int Trend, int PredictedGames, bool IsMe) b)
+        (Guid UserId, string Name, int Points, int Tier20, int Tier16, int Tier15, int Tier10, int Tier5, int Bonus, int Trend, int PredictedGames, bool IsMe) a,
+        (Guid UserId, string Name, int Points, int Tier20, int Tier16, int Tier15, int Tier10, int Tier5, int Bonus, int Trend, int PredictedGames, bool IsMe) b)
         => a.Points == b.Points
            && a.Tier20 == b.Tier20
            && a.Tier16 == b.Tier16

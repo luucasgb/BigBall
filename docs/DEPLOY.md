@@ -67,6 +67,11 @@ Host=aws-0-<regiao>.pooler.supabase.com;Port=5432;Database=postgres;Username=pos
 
 6. Faça commit e push no `master` — o workflow `deploy-web.yml` publica o site em `https://bigball.pages.dev`.
 7. Volte ao Railway e confira que `CorsOrigins__0` aponta exatamente para essa origem (https, sem barra final), senão o navegador bloqueia as chamadas à API.
+8. No dashboard da Supabase, em **Authentication → URL Configuration**, ajuste os redirects de OAuth (login com Google):
+   - **Site URL** → `https://bigball.pages.dev`
+   - **Redirect URLs** (allowlist) → adicione `https://bigball.pages.dev/auth/callback`. Para continuar logando localmente, mantenha também `http://localhost:5180/auth/callback`.
+
+   > O frontend já manda o `redirect_to` correto (montado a partir do `Nav.BaseUri`). Se a URL não estiver na allowlist, a Supabase **ignora** o `redirect_to` e cai no **Site URL** — por isso, com o Site URL ainda em `http://localhost:5180`, o login em produção volta para o localhost (token na raiz `/#access_token=...` em vez de `/auth/callback`).
 
 ## 4. Smoke test
 

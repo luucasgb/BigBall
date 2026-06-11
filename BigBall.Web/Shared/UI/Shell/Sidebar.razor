@@ -1,0 +1,104 @@
+@* Fixed left-nav sidebar shared across all desktop screens. *@
+@using BigBall.Client.Core.Abstractions
+@using BigBall.Web.Platform
+@inject IUserProfileStore UserProfileStore
+@inject ICreatePoolDialogService CreatePoolDialog
+@inject IJoinPoolDialogService JoinPoolDialog
+@implements IDisposable
+
+<SidebarFrame>
+    <div class="bb-logo">
+        <div class="bb-logo-mark">
+            <Icon Path="@IconPaths.Trophy" Size="20" />
+        </div>
+        <div class="bb-logo-text">BigBall</div>
+    </div>
+
+    <SidebarNavSection>Bolões</SidebarNavSection>
+    <SidebarNavItem IconPath="@IconPaths.Home"
+                    Label="Início"
+                    Href="/"
+                    IsActive="@(Active == "dashboard")" />
+    <SidebarNavItem IconPath="@IconPaths.Calendar"
+                    Label="Calendário"
+                    Href="/calendar"
+                    IsActive="@(Active == "calendar")" />
+    <SidebarNavItem IconPath="@IconPaths.Globe"
+                    Label="Descobrir"
+                    Href="/discover"
+                    IsActive="@(Active == "discover")" />
+    <SidebarNavItem IconPath="@IconPaths.Plus"
+                    Label="Novo bolão"
+                    OnClickAction="@(() => CreatePoolDialog.Open())" />
+    <SidebarNavItem IconPath="@IconPaths.Lock"
+                    Label="Entrar com código"
+                    OnClickAction="@(() => JoinPoolDialog.Open())" />
+
+    <SidebarNavSection>Conta</SidebarNavSection>
+    <SidebarNavItem IconPath="@IconPaths.User"
+                    Label="Perfil"
+                    Href="/profile"
+                    IsActive="@(Active == "profile")" />
+
+    <SidebarNavSection>Big Ball</SidebarNavSection>
+    <SidebarNavItem IconPath="@IconPaths.Info"
+                    Label="Sobre"
+                    Href="/about"
+                    IsActive="@(Active == "about")" />
+
+    <SidebarUserFooter Name="@ResolvedUserName" Email="@ResolvedUserEmail" AvatarUrl="@ResolvedAvatarUrl" />
+</SidebarFrame>
+
+@code {
+    [Parameter] public string Active { get; set; } = string.Empty;
+    [Parameter] public string UserName { get; set; } = string.Empty;
+    [Parameter] public string UserEmail { get; set; } = string.Empty;
+
+    private string ResolvedUserName { get; set; } = string.Empty;
+    private string ResolvedUserEmail { get; set; } = string.Empty;
+    private string? ResolvedAvatarUrl { get; set; }
+
+    protected override void OnInitialized()
+    {
+        UserProfileStore.SnapshotChanged += OnSnapshotChanged;
+        ApplyFromStore();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await UserProfileStore.EnsureHydratedFromStorageAsync();
+        ApplyFromStore();
+        StateHasChanged();
+    }
+
+    private void OnSnapshotChanged()
+    {
+        ApplyFromStore();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ApplyFromStore()
+    {
+        if (UserProfileStore.Snapshot is { } profile)
+        {
+            ResolvedUserName = string.IsNullOrWhiteSpace(profile.DisplayName) ? UserName : profile.DisplayName;
+            ResolvedUserEmail = string.IsNullOrWhiteSpace(profile.Email) ? UserEmail : profile.Email;
+            ResolvedAvatarUrl = string.IsNullOrWhiteSpace(profile.AvatarUrl) ? null : profile.AvatarUrl;
+            return;
+        }
+
+        ResolvedUserName = UserName;
+        ResolvedUserEmail = UserEmail;
+        ResolvedAvatarUrl = null;
+    }
+
+    public void Dispose()
+    {
+        UserProfileStore.SnapshotChanged -= OnSnapshotChanged;
+    }
+}

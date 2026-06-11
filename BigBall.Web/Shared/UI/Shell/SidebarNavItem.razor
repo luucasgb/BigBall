@@ -1,0 +1,42 @@
+@* Single row in the app sidebar: icon, label, optional Href; omit Href for a non-interactive (disabled) row. *@
+@inject NavigationManager Nav
+
+<div class="bb-nav-item @(IsActive ? "active" : "") @(IsEffectivelyDisabled ? "nav-item--disabled" : "")"
+     title="@Title"
+     @onclick="OnClick">
+    <Icon Path="@IconPath" Size="18" />
+    <span>@Label</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string IconPath { get; set; } = string.Empty;
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public bool IsActive { get; set; }
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>When set, the row triggers this action instead of navigating (e.g. opening a dialog).</summary>
+    [Parameter] public EventCallback OnClickAction { get; set; }
+
+    bool IsEffectivelyDisabled => string.IsNullOrEmpty(Href) && !OnClickAction.HasDelegate;
+
+    Task OnClick()
+    {
+        if (OnClickAction.HasDelegate)
+        {
+            return OnClickAction.InvokeAsync();
+        }
+
+        if (string.IsNullOrEmpty(Href)) return Task.CompletedTask;
+        Nav.NavigateTo(Href);
+        return Task.CompletedTask;
+    }
+}
+
+<style>
+    .nav-item--disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+</style>

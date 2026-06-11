@@ -1,0 +1,51 @@
+<!-- Pool detail page header with name, icon, and visibility -->
+<div class="pool-header">
+    <div class="pool-header-icon">
+        <Icon Path="@IconPaths.Trophy" Size="28" />
+    </div>
+    <div class="pool-header-text">
+        <div class="bb-page-eyebrow">Bolão · @VisibilityLabel</div>
+        <div class="bb-page-title">@Name</div>
+    </div>
+    <button class="bb-topbar-btn" @onclick="OnBack">
+        <Icon Path="@IconPaths.ChevronL" Size="16" /> Voltar
+    </button>
+</div>
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+    [Parameter] public string Visibility { get; set; } = "";
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private string VisibilityLabel => Visibility?.Trim().ToLowerInvariant() switch
+    {
+        "private" => "Privado",
+        "public" => "Público",
+        _ => Visibility ?? ""
+    };
+}
+
+<style>
+    .pool-header {
+        padding: 24px 40px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .pool-header-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: color-mix(in oklab, var(--brand-strong) 20%, transparent);
+        color: var(--brand-strong);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .pool-header-text {
+        flex: 1;
+    }
+</style>

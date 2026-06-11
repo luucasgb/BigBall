@@ -1,0 +1,32 @@
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+
+<div class="bb-bottomnav">
+    @foreach (var tab in Tabs)
+    {
+        <div class="bb-tab @(tab.Id == Active ? "active" : "") @(tab.Route is null ? "disabled" : "")"
+             @onclick="() => OnTabClick(tab)">
+            <Icon Path="@tab.Path" Size="22" />
+            <span>@tab.Label</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Active { get; set; } = "home";
+
+    private record Tab(string Id, string Label, string Path, string? Route);
+
+    private static readonly Tab[] Tabs =
+    {
+        new("dashboard", "Início",     IconPaths.Trophy,   "/"),
+        new("calendar",  "Calendário", IconPaths.Calendar, "/calendar"),
+        new("discover",  "Descobrir",  IconPaths.Globe,    "/discover"),
+        new("profile",   "Perfil",     IconPaths.User,     "/profile"),
+    };
+
+    private void OnTabClick(Tab tab)
+    {
+        if (tab.Route is null || tab.Id == Active) return;
+        Nav.NavigateTo(tab.Route);
+    }
+}

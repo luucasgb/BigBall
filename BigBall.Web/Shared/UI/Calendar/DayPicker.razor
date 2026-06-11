@@ -1,0 +1,147 @@
+@inject IJSRuntime JS
+
+<div class="day-picker can-scroll-right">
+    <div class="day-picker-viewport" @ref="_viewport">
+        <div class="day-picker-track">
+            @foreach (var day in Items)
+            {
+                var isActive = day.Label == Selected;
+                <div class="day-picker-tile @(isActive ? "active" : "")"
+                     @onclick="() => SelectedChanged.InvokeAsync(day.Label)">
+                    <div class="day-picker-name">@day.DayName</div>
+                    <div class="day-picker-num">@day.DayNum</div>
+                    <div class="day-picker-count">@day.MatchCount jogos</div>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="day-picker-fade day-picker-fade-left"></div>
+    <div class="day-picker-fade day-picker-fade-right"></div>
+</div>
+
+@code {
+    public record DayPickerItem(string DayName, string DayNum, string Label, int MatchCount);
+
+    [Parameter] public IReadOnlyList<DayPickerItem> Items { get; set; } = [];
+    [Parameter] public string Selected { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedChanged { get; set; }
+
+    private ElementReference _viewport;
+    private string _lastCentered = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Items.Count == 0)
+        {
+            return;
+        }
+
+        if (firstRender || Selected != _lastCentered)
+        {
+            _lastCentered = Selected;
+            try
+            {
+                await JS.InvokeVoidAsync("bigBallDayPicker.center", _viewport);
+            }
+            catch (JSException)
+            {
+                // Helper script not yet available (e.g. stale cached index.html); carousel
+                // simply won't auto-scroll. Avoids tearing down the whole calendar.
+            }
+        }
+    }
+}
+
+<style>
+    .day-picker {
+        position: relative;
+        padding: 0 40px 20px;
+    }
+
+    .day-picker-viewport {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .day-picker-viewport::-webkit-scrollbar {
+        height: 0;
+        width: 0;
+    }
+
+    .day-picker-track {
+        display: flex;
+        gap: 8px;
+        /* Trailing padding so the last tile can scroll fully clear of the right fade. */
+        padding-right: 8px;
+    }
+
+    .day-picker-tile {
+        flex: 0 0 86px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: var(--bg-elev);
+        border: 1px solid var(--line);
+        color: var(--fg);
+        cursor: pointer;
+        transition: background 0.1s, border-color 0.1s, color 0.1s;
+    }
+
+    .day-picker-tile.active {
+        background: var(--brand-strong);
+        border-color: var(--brand-strong);
+        color: var(--brand-ink);
+    }
+
+    .day-picker-name {
+        font-size: 11px;
+        opacity: 0.7;
+        letter-spacing: 0.06em;
+        font-weight: 500;
+    }
+
+    .day-picker-num {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin-top: 2px;
+    }
+
+    .day-picker-count {
+        font-size: 11px;
+        opacity: 0.7;
+        margin-top: 4px;
+    }
+
+    /* Edge fades suggest the strip continues off-screen; toggled by scroll position. */
+    .day-picker-fade {
+        position: absolute;
+        top: 0;
+        bottom: 20px;
+        width: 56px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+        z-index: 1;
+    }
+
+    .day-picker-fade-left {
+        left: 0;
+        background: linear-gradient(to right, var(--bg) 30%, transparent);
+    }
+
+    .day-picker-fade-right {
+        right: 0;
+        background: linear-gradient(to left, var(--bg) 30%, transparent);
+    }
+
+    .day-picker.can-scroll-left .day-picker-fade-left {
+        opacity: 1;
+    }
+
+    .day-picker.can-scroll-right .day-picker-fade-right {
+        opacity: 1;
+    }
+</style>

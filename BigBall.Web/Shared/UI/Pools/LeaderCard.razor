@@ -1,0 +1,62 @@
+<!-- Card displaying current pool leader -->
+<div class="leader-card">
+    <div class="leader-header">
+        <div class="leader-title">Líder atual</div>
+    </div>
+    <div class="leader-content">
+        <Avatar Name="@LeaderName" Size="40" />
+        <div class="leader-info">
+            <div class="leader-name">@LeaderName</div>
+            <div class="leader-points">@LeaderPoints pts</div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string LeaderName { get; set; } = "";
+    [Parameter] public int LeaderPoints { get; set; }
+}
+
+<style>
+    .leader-card {
+        background: var(--bg-elev);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .leader-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .leader-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--fg);
+    }
+
+    .leader-content {
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .leader-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .leader-name {
+        font-weight: 600;
+        font-size: 15px;
+        color: var(--fg);
+    }
+
+    .leader-points {
+        font-size: 13px;
+        color: var(--fg-2);
+    }
+</style>

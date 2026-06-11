@@ -1,0 +1,239 @@
+@* Modal de edição de perfil (nome de exibição / fuso horário), acionado por IProfileEditDialogService. *@
+@using BigBall.Client.Core.Abstractions
+@using BigBall.Shared.Dtos
+@implements IDisposable
+@inject IProfileEditDialogService Dialog
+@inject IAuthApi AuthApi
+@inject IUserProfileStore UserProfileStore
+
+@if (Dialog.IsOpen)
+{
+    <div class="bb-modal-backdrop" @onclick="OnBackdrop" @onkeydown="OnKeyDown" tabindex="-1">
+        <div class="bb-modal-panel" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-labelledby="bb-profile-edit-title">
+            <div class="bb-modal-header">
+                <h2 class="bb-modal-title" id="bb-profile-edit-title">@Title</h2>
+                <button type="button" class="bb-modal-close bb-topbar-btn" @onclick="Close" aria-label="Fechar">×</button>
+            </div>
+
+            <div class="bb-profile-edit-form">
+                @if (Dialog.Field == ProfileEditField.DisplayName)
+                {
+                    <label class="bb-field">
+                        <span class="bb-field-l">Nome de exibição</span>
+                        <input class="bb-input" maxlength="120" @bind="_displayName" @bind:event="oninput" />
+                    </label>
+                }
+                else
+                {
+                    <label class="bb-field">
+                        <span class="bb-field-l">Fuso horário</span>
+                        <select class="bb-input" @bind="_timeZoneId">
+                            @foreach (var tz in _timeZones)
+                            {
+                                <option value="@tz.Id">@FormatZone(tz)</option>
+                            }
+                        </select>
+                    </label>
+                }
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="bb-modal-err" role="alert">@_error</div>
+                }
+
+                <div class="bb-modal-actions">
+                    <button type="button" class="bb-btn bb-btn-secondary" disabled="@_busy" @onclick="Close">Cancelar</button>
+                    <button type="button" class="bb-btn bb-btn-primary" disabled="@_busy" @onclick="Submit">
+                        @(_busy ? "Salvando…" : "Salvar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private static readonly IReadOnlyList<TimeZoneInfo> _timeZones =
+        TimeZoneInfo.GetSystemTimeZones().OrderBy(z => z.BaseUtcOffset).ThenBy(z => z.Id, StringComparer.Ordinal).ToList();
+
+    private bool _wasOpen;
+    private bool _subscribed;
+    private bool _busy;
+    private string? _error;
+    private string _displayName = "";
+    private string _timeZoneId = "";
+
+    private string Title => Dialog.Field == ProfileEditField.DisplayName ? "Nome de exibição" : "Fuso horário";
+
+    protected override void OnInitialized()
+    {
+        if (_subscribed) return;
+        Dialog.StateChanged += OnDialogChanged;
+        _subscribed = true;
+    }
+
+    public void Dispose()
+    {
+        if (!_subscribed) return;
+        Dialog.StateChanged -= OnDialogChanged;
+        _subscribed = false;
+    }
+
+    private void OnDialogChanged()
+    {
+        if (Dialog.IsOpen && !_wasOpen)
+        {
+            ResetFromProfile();
+        }
+        _wasOpen = Dialog.IsOpen;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ResetFromProfile()
+    {
+        _error = null;
+        _busy = false;
+        var p = UserProfileStore.Snapshot;
+        _displayName = p?.DisplayName ?? "";
+        _timeZoneId = p?.TimeZoneId ?? UserTimeZoneProvider.DefaultTimeZoneId;
+    }
+
+    private void Close() => Dialog.Close();
+
+    private void OnBackdrop() => Close();
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            Close();
+        }
+    }
+
+    private async Task Submit()
+    {
+        _error = null;
+
+        UpdateProfileRequest request;
+        if (Dialog.Field == ProfileEditField.DisplayName)
+        {
+            if (string.IsNullOrWhiteSpace(_displayName))
+            {
+                _error = "Informe um nome de exibição.";
+                return;
+            }
+            request = new UpdateProfileRequest(DisplayName: _displayName.Trim());
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(_timeZoneId))
+            {
+                _error = "Selecione um fuso horário.";
+                return;
+            }
+            request = new UpdateProfileRequest(TimeZoneId: _timeZoneId);
+        }
+
+        _busy = true;
+        try
+        {
+            var updated = await AuthApi.UpdateMyProfileAsync(request);
+            await UserProfileStore.SetSnapshotAsync(updated);
+            Dialog.Close();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string FormatZone(TimeZoneInfo tz)
+    {
+        var off = tz.BaseUtcOffset;
+        var sign = off < TimeSpan.Zero ? "-" : "+";
+        return $"(UTC{sign}{Math.Abs(off.Hours):00}:{Math.Abs(off.Minutes):00}) {tz.Id}";
+    }
+}
+
+<style>
+    .bb-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: color-mix(in oklab, var(--bg-2) 35%, rgba(0, 0, 0, 0.55));
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    .bb-modal-panel {
+        width: 100%;
+        max-width: 420px;
+        max-height: min(90vh, 640px);
+        overflow-y: auto;
+        background: var(--bg-elev);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+    }
+    .bb-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 20px 0;
+        gap: 12px;
+    }
+    .bb-modal-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+    .bb-modal-close {
+        min-width: 36px;
+        font-size: 1.4rem;
+        line-height: 1;
+    }
+    .bb-profile-edit-form {
+        padding: 16px 20px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .bb-field { display: flex; flex-direction: column; gap: 6px; }
+    .bb-field-l { font-size: 12px; font-weight: 600; color: var(--fg-2); }
+    .bb-input {
+        width: 100%;
+        min-height: 40px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        color: var(--fg);
+        font: inherit;
+        color-scheme: dark;
+    }
+
+    /* Sem isto, as opções herdam o texto creme do tema sobre o fundo branco padrão do navegador. */
+    select.bb-input option {
+        background: var(--bg-elev);
+        color: var(--fg);
+    }
+    .bb-modal-err {
+        font-size: 13px;
+        color: var(--danger);
+    }
+    .bb-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 4px;
+    }
+</style>

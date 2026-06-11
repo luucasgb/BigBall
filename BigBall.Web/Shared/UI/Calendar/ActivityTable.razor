@@ -1,0 +1,129 @@
+@* Table showing recent activity with match results *@
+<div class="activity-table-container">
+    <div class="activity-table-header">
+        <div class="activity-table-title">@Title</div>
+        @if (!string.IsNullOrEmpty(ViewAllLabel))
+        {
+            <span class="bb-dcard-link">@ViewAllLabel <Icon Path="@IconPaths.Chevron" Size="14" /></span>
+        }
+    </div>
+    <table class="bb-table">
+        <thead>
+            <tr>
+                <th class="activity-table-th-match">Partida</th>
+                <th>Bolão</th>
+                <th class="activity-table-th-right">Resultado</th>
+                <th class="activity-table-th-right">Palpite</th>
+                <th class="activity-table-th-points">Pts</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Items)
+            {
+                <tr>
+                    <td class="activity-table-td-match" data-label="Partida">
+                        <div class="activity-table-match-name">@row.Match</div>
+                        <div class="activity-table-match-when">@row.When</div>
+                    </td>
+                    <td class="activity-table-td-pool" data-label="Bolão">@row.Pool</td>
+                    <td class="activity-table-td-num" data-label="Resultado">@row.Result</td>
+                    <td class="activity-table-td-num" data-label="Palpite">@row.Prediction</td>
+                    <td class="activity-table-td-points activity-table-points-color" data-label="Pts" style="color:@GetPointsColor(row.Points);">@FormatPoints(row.Points)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    public record ActivityRow(string Match, string Pool, string Result, string Prediction, int Points, string When);
+
+    [Parameter] public string Title { get; set; } = "Atividade de palpites";
+    [Parameter] public string ViewAllLabel { get; set; } = "Ver tudo";
+    [Parameter] public IReadOnlyList<ActivityRow> Items { get; set; } = [];
+
+    private string GetPointsColor(int points) =>
+        points >= 16 ? "var(--success)" :
+        points >= 10 ? "var(--brand-strong)" :
+        points > 0 ? "var(--fg-2)" :
+        "var(--fg-3)";
+
+    private string FormatPoints(int points) =>
+        points > 0 ? $"+{points}" : "0";
+}
+
+<style>
+    .activity-table-container {
+        padding: 0;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+    }
+
+    .activity-table-header {
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .activity-table-title {
+        flex: 1;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .activity-table-header .bb-dcard-link {
+        margin-left: auto;
+    }
+
+    .activity-table-th-match {
+        padding-left: 20px;
+    }
+
+    .activity-table-th-right {
+        text-align: right;
+    }
+
+    .activity-table-th-points {
+        text-align: right;
+        padding-right: 20px;
+    }
+
+    .activity-table-td-match {
+        padding-left: 20px;
+    }
+
+    .activity-table-match-name {
+        font-weight: 500;
+    }
+
+    .activity-table-match-when {
+        font-size: 11px;
+        color: var(--fg-3);
+        margin-top: 2px;
+    }
+
+    .activity-table-td-pool {
+        font-size: 13px;
+        color: var(--fg-2);
+    }
+
+    .activity-table-td-num {
+        text-align: right;
+        color: var(--fg-3);
+        font-family: var(--font-sans);
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .activity-table-td-num:nth-child(3) {
+        color: var(--fg-2);
+    }
+
+    .activity-table-td-points {
+        padding-right: 20px;
+        text-align: right;
+        font-size: 17px;
+    }
+</style>

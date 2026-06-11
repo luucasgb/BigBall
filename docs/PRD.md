@@ -1,7 +1,7 @@
 # BigBall — Product Requirements Document (PRD)
 
-**Versão:** 1.4  
-**Data:** 28 de abril de 2026  
+**Versão:** 1.5  
+**Data:** 22 de maio de 2026  
 **Status:** MVP + roadmap pós-MVP
 
 **Engenharia:** decisões de stack, integrações e detalhes de implementação estão em [**TechSpec.md**](./TechSpec.md) (este PRD permanece focado em produto e regras de negócio).
@@ -131,8 +131,8 @@ Cada item inclui **descrição** e **critérios de aceite** resumidos.
 #### 4.6.1 Estado da partida no provedor (visão produto)
 
 - **Faixas 1–5** da pontuação (secção **4.8**) referem-se **apenas ao tempo regulamentar (TR)**. O **+3** de bônus por pênaltis só se aplica quando houver uma **disputa real de pênaltis** (critérios em 4.8).
-- O **provedor de dados** expõe **códigos de estado numéricos** (`status.code` ou equivalente, conforme o contrato da API — ver **TechSpec §6.2.1**) para lógica programática. A separação entre **TR**, **prorrogação** e **disputa de pênaltis** deve ser derivada **sem ambiguidade** dos campos mapeados; o detalhe normativo está no **TechSpec** (§6.2.1 e **§6.2.4**).
-- Para **antecipar entrada em prorrogação**, uma sequência útil em atualizações sucessivas (por exemplo sob consultas periódicas) é **segundo tempo → intervalo/halftime antes da prorrogação → início da prorrogação**; já o **fim sem prorrogação** segue o caminho **segundo tempo → fim ao fim do TR**. Transições de códigos e semântica de polling estão no **TechSpec §6.2.4** e §6.2.5.
+- O **provedor de dados** expõe **sinais de estado** (códigos numéricos ou flags booleanas, conforme o contrato da API — ver **TechSpec §6.2**) para lógica programática. A separação entre **TR**, **prorrogação** e **disputa de pênaltis** deve ser derivada **sem ambiguidade** dos campos mapeados; o detalhe normativo está no **TechSpec** (§6.2.2 para o provedor vigente e **§6.2.4**).
+- Para **antecipar entrada em prorrogação**, uma sequência útil em atualizações sucessivas (por exemplo sob consultas periódicas) é **segundo tempo → intervalo/halftime antes da prorrogação → início da prorrogação**; já o **fim sem prorrogação** segue o caminho **segundo tempo → fim ao fim do TR**. A leitura provedor-agnóstica usa a fase canónica `MatchLifecyclePhase` — transições e semântica de polling no **TechSpec §6.2.4** e §6.2.5.
 
 ### 4.7 Palpites
 
@@ -343,7 +343,7 @@ flowchart LR
 
 | Risco                                                                        | Impacto                                     | Mitigação                                                                                                                                                                                                                                                     |
 | ---------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Confiabilidade da API de jogos/placares                                      | Palpites e pontos incorretos ou atrasados   | Provedor MVP (**SportsAPI Pro**, TechSpec); **entrada manual global** por **administrador de plataforma** (4.11); **reconciliação** quando o feed ultrapassar o manual; avaliação pré-Copa de migração (ex. **FlashScore** via RapidAPI, TechSpec); auditoria |
+| Confiabilidade da API de jogos/placares                                      | Palpites e pontos incorretos ou atrasados   | Provedor MVP (**FlashScore** via RapidAPI, TechSpec §6.2.2); **entrada manual global** por **administrador de plataforma** (4.11); **reconciliação** quando o feed ultrapassar o manual; **SportsAPI Pro** permanece em código como adapter de reserva/legado para reativação rápida via config se necessário; auditoria |
 | Erro humano em resultado manual por administrador de plataforma              | Pontuação errada em massa (todos os bolões) | Confirmação em dois passos, auditoria, treinamento; precedência do **provedor** assim que corrigir o feed                                                                                                                                                     |
 | Regra de resultado (TR vs prorrogação vs pênaltis) vs expectativa do usuário | Reclamações                                 | PRD fixa faixas 1–5 sobre **TR**; bônus +3 só com disputa real de pênaltis; UI + FAQ explicando isso; **mapeamento explícito** no adapter do feed → modelo canónico (**TechSpec** 6.2); sem inferir TR de “final” ambíguo; 4.11 quando houver lacuna |
 | Custo de entrada sem pagamento in-app                                        | Atrito entre organizador e grupo            | Texto claro de que o valor é acordado fora da plataforma no MVP                                                                                                                                                                                               |
@@ -357,7 +357,7 @@ flowchart LR
 - **Elegibilidade:** só jogos **não iniciados**; quem **entra no bolão após o início** de uma partida **não palpita** nessa partida naquele bolão (4.7).
 - **Resultado sem feed / conflitos entre bolões:** apenas **administrador de plataforma** insere resultado **manual global** (4.11); **provedor de dados tem precedência** quando atualizar.
 - **Desempate final no ranking:** numeração **1..n** por **ordem alfabética do nome de exibição** + sorteio por **neutro/testemunha** (ordem de elegibilidade em 4.8) + **auditoria** (4.8).
-- **Provedor de dados (MVP):** [**SportsAPI Pro**](https://docs.sportsapipro.com/introduction) para desenvolvimento e testes; **produção** a confirmar após critérios no **TechSpec** (manter ou migrar, ex. [**FlashScore** na RapidAPI](https://rapidapi.com/rapidapi-org1-rapidapi-org-default/api/flashscore4)).
+- **Provedor de dados (MVP):** [**FlashScore** via RapidAPI](https://rapidapi.com/rapidapi-org1-rapidapi-org-default/api/flashscore4) — provedor **cabeado** para desenvolvimento, testes e produção do MVP. O adapter de [**SportsAPI Pro**](https://docs.sportsapipro.com/introduction) permanece **disponível em código** como reserva histórica/fallback (não cabeado por padrão; reativável via `SportsData:Provider` mediante re-registro DI).
 - **Identidade:** **`auth.users`** (Supabase) + **`profiles`** (`id` 1:1); sem tabela de usuário espelhada.
 - **Clientes:** **Blazor WebAssembly** (MVP web); **.NET MAUI** (mobile) após o MVP web.
 - **TR vs prorrogação / feed ambíguo:** o **TechSpec** 6.2 define **mapeamento campo-a-campo** por provedor para o modelo canónico; **não** inferir placar de TR a partir de resultado “final” quando houver prorrogação ou pênaltis sem campo explícito de TR; lacunas tratadas pelo **PRD 4.11** até o feed (ou mapeamento) ficar inequívoco, mantendo a **precedência do provedor**.

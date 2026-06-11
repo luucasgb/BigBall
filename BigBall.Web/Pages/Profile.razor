@@ -1,0 +1,484 @@
+@page "/profile"
+@layout DesktopAppLayout
+@using System.Globalization
+@using BigBall.Client.Core.Abstractions
+@using BigBall.Shared.Dtos
+@inject IAuthSession AuthSession
+@inject IAuthApi AuthApi
+@inject IPoolsApi PoolsApi
+@inject ITokenStore TokenStore
+@inject IUserProfileStore UserProfileStore
+@inject IUserTimeZoneProvider Tz
+@inject IProfileEditDialogService EditDialog
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageHeader Title="Perfil" Eyebrow="Conta" />
+
+<div class="bb-content">
+            @if (_isBusy)
+            {
+                <div class="profile-loading">Carregando perfil…</div>
+            }
+            else if (_error is not null)
+            {
+                <div class="profile-error">@_error</div>
+            }
+            else if (_profile is not null)
+            {
+            <ProfileHero
+                Name="@_profile.DisplayName"
+                AvatarUrl="@_profile.AvatarUrl"
+                Handle="@GetHandleFromEmail(_profile.Email)"
+                Email="@_profile.Email"
+                MemberSince="@FormatMemberSince(_profile.CreateDate)"
+                Timezone="@Tz.Label"
+                AdminOfLabel="@_adminOfLabel"
+                MemberLabel="@_memberLabel"
+                KpiItems="@_kpiItems" />
+
+            <div class="profile-layout">
+                <div class="profile-column-left">
+                    <ScoringBandsCard
+                        Title="Pontos por faixa"
+                        Items="@_scoringBands" />
+
+                    <SubmissionsCard
+                        Title="Palpites enviados"
+                        Count="@_submittedCount"
+                        Total="@_eligibleCount"
+                        FooterLeft="Jogos com palpite seu"
+                        FooterRight="@($"{_eligibleCount} no torneio")" />
+                </div>
+
+                <div class="profile-column-center">
+                    <ActivityTable
+                        Title="Atividade de palpites"
+                        ViewAllLabel=""
+                        Items="@_activityItems" />
+
+                    <MyPoolsCard
+                        Title="Meus bolões"
+                        ViewAllLabel="Ver todos"
+                        Items="@_poolItems" />
+                </div>
+
+                <div class="profile-column-right">
+                    <AccountSettingsCard
+                        Title="Conta"
+                        Items="@_accountSettingsItems" />
+
+                    <div class="profile-account-actions">
+                        <button type="button"
+                                class="bb-btn bb-btn-ghost account-action-btn"
+                                disabled="@_loggingOut"
+                                @onclick="LogoutAsync">
+                            Sair da conta
+                        </button>
+                        <button type="button"
+                                class="bb-btn bb-btn-ghost account-action-btn danger"
+                                @onclick="OpenDeleteModal">
+                            Excluir dados
+                        </button>
+                    </div>
+                </div>
+            </div>
+            }
+</div>
+
+@if (_showDeleteModal)
+{
+    <div class="bb-modal-backdrop" @onclick="CloseDeleteModal" @onkeydown="OnDeleteKeyDown" tabindex="-1">
+        <div class="bb-modal-panel" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-labelledby="bb-delete-account-title">
+            <div class="bb-modal-header">
+                <h2 class="bb-modal-title" id="bb-delete-account-title">Excluir conta e dados</h2>
+                <button type="button" class="bb-modal-close bb-topbar-btn" disabled="@_deleting" @onclick="CloseDeleteModal" aria-label="Fechar">×</button>
+            </div>
+
+            <div class="bb-delete-account-body">
+                <p class="bb-delete-warn">
+                    Esta ação é <strong>permanente</strong>. Sua conta e todos os seus dados pessoais
+                    (e-mail, nome de exibição e avatar) serão <strong>excluídos definitivamente</strong>.
+                </p>
+                <p class="bb-delete-note">
+                    Seus palpites continuarão contando para a pontuação dos bolões, mas você aparecerá
+                    apenas como <strong>“Usuário excluído”</strong>. Não será possível recuperar a conta.
+                </p>
+
+                <label class="bb-field">
+                    <span class="bb-field-l">Para confirmar, digite <strong>EXCLUIR</strong></span>
+                    <input class="bb-input" autocomplete="off" disabled="@_deleting"
+                           @bind="_deleteConfirmText" @bind:event="oninput" placeholder="EXCLUIR" />
+                </label>
+
+                @if (!string.IsNullOrEmpty(_deleteError))
+                {
+                    <div class="bb-modal-err" role="alert">@_deleteError</div>
+                }
+
+                <div class="bb-modal-actions">
+                    <button type="button" class="bb-btn bb-btn-secondary" disabled="@_deleting" @onclick="CloseDeleteModal">Cancelar</button>
+                    <button type="button" class="bb-btn bb-btn-danger" disabled="@(_deleting || !DeleteConfirmed)" @onclick="DeleteAccountAsync">
+                        @if (_deleting)
+                        {
+                            <text>Excluindo…</text>
+                        }
+                        else
+                        {
+                            <text>Excluir definitivamente</text>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isBusy = true;
+    private string? _error;
+    private ProfileDto? _profile;
+    private IReadOnlyList<ProfileKpis.KpiItem> _kpiItems = [];
+    private IReadOnlyList<MyPoolsCard.PoolItem> _poolItems = [];
+    private IReadOnlyList<AccountSettingsCard.SettingRow> _accountSettingsItems = [];
+    private string? _adminOfLabel;
+    private string _memberLabel = string.Empty;
+    private bool _loggingOut;
+
+    private IReadOnlyList<ScoringBandsCard.BandItem> _scoringBands = EmptyBands;
+    private IReadOnlyList<ActivityTable.ActivityRow> _activityItems = [];
+    private int _submittedCount;
+    private int _eligibleCount;
+
+    private bool _showDeleteModal;
+    private bool _deleting;
+    private string _deleteConfirmText = string.Empty;
+    private string? _deleteError;
+
+    private bool DeleteConfirmed =>
+        string.Equals(_deleteConfirmText.Trim(), "EXCLUIR", StringComparison.Ordinal);
+
+    protected override async Task OnInitializedAsync()
+    {
+        UserProfileStore.SnapshotChanged += OnProfileChanged;
+        Tz.Changed += OnTimeZoneChanged;
+
+        if (string.IsNullOrEmpty(await TokenStore.GetTokenAsync()))
+        {
+            Nav.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        try
+        {
+            await UserProfileStore.EnsureHydratedFromStorageAsync();
+            _profile = UserProfileStore.Snapshot;
+
+            var poolsTask = PoolsApi.GetMyPoolsAsync();
+            if (_profile is null)
+            {
+                var profileTask = AuthApi.GetMyProfileAsync();
+                await Task.WhenAll(profileTask, poolsTask);
+                _profile = await profileTask;
+                await UserProfileStore.SetSnapshotAsync(_profile);
+            }
+            else
+            {
+                await poolsTask;
+            }
+
+            var pools = await poolsTask;
+
+            _adminOfLabel = null; /* Membro de bolão exige detalhe por bolão; acrescentar quando a API expuser o papel. */
+            _memberLabel = PtCopy.MemberPoolsLine(pools.Count);
+
+            _kpiItems = BuildKpiItems(pools);
+            _poolItems = pools
+                .Select(p => new MyPoolsCard.PoolItem(p.Name, p.MemberCount, false, p.MyRank, p.MyPoints))
+                .ToList();
+            _accountSettingsItems = BuildAccountSettings();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Não foi possível carregar o perfil. {ex.Message}";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+
+        await LoadStatsAsync();
+    }
+
+    private async Task LoadStatsAsync()
+    {
+        try
+        {
+            var stats = await AuthApi.GetMyStatsAsync();
+            _submittedCount = stats.SubmittedCount;
+            _eligibleCount = stats.EligibleCount;
+            _scoringBands = stats.Bands
+                .Select(b => new ScoringBandsCard.BandItem(b.Tier, BandLabel(b.Tier), b.Count))
+                .ToList();
+            _activityItems = stats.RecentActivity.Select(MapActivity).ToList();
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Estatísticas indisponíveis: mantém os defaults (zeros / vazio) sem quebrar o perfil.
+        }
+    }
+
+    private ActivityTable.ActivityRow MapActivity(ProfileActivityRowDto a)
+    {
+        var local = Tz.ToLocal(a.KickoffUtc);
+        var when = $"{PtDates.AbbreviatedDay(local.DayOfWeek)} {local:dd} {PtDates.AbbreviatedMonth(local.Month)}";
+        var result = a is { ResultHome: { } rh, ResultAway: { } ra } ? $"{rh}–{ra}" : "—";
+        return new ActivityTable.ActivityRow(
+            $"{a.HomeCode} × {a.AwayCode}",
+            a.PoolName,
+            result,
+            $"{a.PredHome}–{a.PredAway}",
+            a.Points,
+            when);
+    }
+
+    private IReadOnlyList<AccountSettingsCard.SettingRow> BuildAccountSettings() =>
+    [
+        new(IconPaths.User, "Nome de exibição", _profile?.DisplayName ?? "",
+            EventCallback.Factory.Create(this, () => EditDialog.Open(ProfileEditField.DisplayName))),
+        new(IconPaths.Globe, "Fuso horário", Tz.Label,
+            EventCallback.Factory.Create(this, () => EditDialog.Open(ProfileEditField.TimeZone)))
+    ];
+
+    private void OnProfileChanged()
+    {
+        _profile = UserProfileStore.Snapshot;
+        _accountSettingsItems = BuildAccountSettings();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnTimeZoneChanged()
+    {
+        // Rótulo do fuso na linha "Fuso horário" e os horários da atividade dependem do fuso atual.
+        _accountSettingsItems = BuildAccountSettings();
+        InvokeAsync(StateHasChanged);
+        _ = LoadStatsAsync();
+    }
+
+    public void Dispose()
+    {
+        UserProfileStore.SnapshotChanged -= OnProfileChanged;
+        Tz.Changed -= OnTimeZoneChanged;
+    }
+
+    private static string BandLabel(int tier) => tier switch
+    {
+        20 => "Placar exato",
+        16 => "Vencedor + saldo",
+        15 => "Vencedor + 1 placar",
+        10 => "Apenas vencedor",
+        5  => "Apenas 1 placar",
+        _  => "Sem pontos",
+    };
+
+    private static readonly IReadOnlyList<ScoringBandsCard.BandItem> EmptyBands =
+    [
+        new(20, "Placar exato", 0),
+        new(16, "Vencedor + saldo", 0),
+        new(15, "Vencedor + 1 placar", 0),
+        new(10, "Apenas vencedor", 0),
+        new(5,  "Apenas 1 placar", 0),
+        new(0,  "Sem pontos", 0)
+    ];
+
+    private static IReadOnlyList<ProfileKpis.KpiItem> BuildKpiItems(IReadOnlyList<MyPoolDto> pools)
+    {
+        if (pools.Count == 0)
+        {
+            return
+            [
+                new("Pontos totais", "0", "nenhum bolão ainda", IsHighlight: true),
+                new("Melhor posição", "—", "—"),
+                new("Placar exato", "—", "em breve"),
+                new("Bônus pênaltis", "—", "em breve")
+            ];
+        }
+
+        var totalPoints = pools.Sum(p => p.MyPoints);
+        var best = pools.Min(p => p.MyRank);
+        return
+        [
+            new("Pontos totais", totalPoints.ToString(CultureInfo.InvariantCulture), PtCopy.InPoolsFooter(pools.Count), IsHighlight: true),
+            new("Melhor posição", $"#{best}", "menor # entre teus bolões"),
+            new("Placar exato", "—", "em breve"),
+            new("Bônus pênaltis", "—", "em breve")
+        ];
+    }
+
+    private static string GetHandleFromEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return string.Empty;
+        }
+
+        var at = email.IndexOf('@');
+        var local = at > 0 ? email[..at] : email;
+        return "@" + local;
+    }
+
+    private static string FormatMemberSince(DateTime utc) =>
+        $"Membro desde {utc.ToString("MMM/yyyy", CultureInfo.GetCultureInfo("pt-BR"))}";
+
+    private async Task LogoutAsync()
+    {
+        if (_loggingOut) return;
+        _loggingOut = true;
+        try
+        {
+            await AuthSession.LogoutAsync();
+        }
+        finally
+        {
+            _loggingOut = false;
+        }
+    }
+
+    private void OpenDeleteModal()
+    {
+        _deleteConfirmText = string.Empty;
+        _deleteError = null;
+        _showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        if (_deleting) return;
+        _showDeleteModal = false;
+    }
+
+    private void OnDeleteKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            CloseDeleteModal();
+        }
+    }
+
+    private async Task DeleteAccountAsync()
+    {
+        if (_deleting || !DeleteConfirmed) return;
+        _deleting = true;
+        _deleteError = null;
+        try
+        {
+            await AuthApi.DeleteAccountAsync();
+            await AuthSession.LogoutAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _deleteError = ex.Message;
+        }
+        catch (Exception)
+        {
+            _deleteError = "Não foi possível excluir a conta. Tente novamente.";
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
+
+}
+
+<style>
+    .profile-layout {
+        padding: 0 40px 40px;
+        display: grid;
+        grid-template-columns: 1.05fr 1.4fr 1fr;
+        gap: 20px;
+    }
+
+    .profile-column-left,
+    .profile-column-center,
+    .profile-column-right {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .profile-account-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .account-action-btn {
+        flex: 1;
+        height: 44px;
+    }
+
+    .account-action-btn.danger {
+        color: var(--danger);
+        border-color: color-mix(in oklab, var(--danger) 35%, var(--line));
+    }
+
+    .bb-btn-danger {
+        background: var(--danger);
+        color: #fff;
+    }
+
+    .bb-btn-danger:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    .bb-delete-account-body {
+        padding: 16px 20px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .bb-delete-warn,
+    .bb-delete-note {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--fg-2);
+    }
+
+    .profile-loading,
+    .profile-error {
+        padding: 24px 40px;
+        color: var(--fg-2);
+    }
+
+    .profile-error {
+        color: var(--danger);
+    }
+
+    @@media (max-width: 768px) {
+        .profile-layout {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 0 16px 24px;
+            gap: 16px;
+        }
+
+        .profile-column-left,
+        .profile-column-center,
+        .profile-column-right {
+            min-width: 0;
+        }
+
+        /* Botões de conta empilhados (tokens-mobile) com mais respiro vertical. */
+        .profile-account-actions {
+            gap: 12px;
+        }
+
+        .account-action-btn {
+            height: auto;
+            padding: 14px;
+        }
+    }
+</style>

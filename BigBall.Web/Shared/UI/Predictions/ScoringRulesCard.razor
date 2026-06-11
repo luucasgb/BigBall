@@ -1,0 +1,78 @@
+<div class="bb-dcard">
+    <div class="scoring-rules-header">
+        <div class="bb-dcard-title">Tabela de pontuação</div>
+    </div>
+    <div class="scoring-rules-table">
+        <div class="bb-tier-row">
+            <span class="tier-pts">20</span>
+            <span>Placar exato</span>
+            <span></span>
+        </div>
+        <div class="bb-tier-row">
+            <span class="tier-pts">16</span>
+            <span>Vencedor + diferença</span>
+            <span></span>
+        </div>
+        <div class="bb-tier-row">
+            <span class="tier-pts">15</span>
+            <span>Vencedor + um lado</span>
+            <span></span>
+        </div>
+        <div class="bb-tier-row">
+            <span class="tier-pts">10</span>
+            <span>Vencedor certo</span>
+            <span></span>
+        </div>
+        <div class="bb-tier-row">
+            <span class="tier-pts">5</span>
+            <span>Um lado certo</span>
+            <span></span>
+        </div>
+        <div class="bb-tier-row">
+            <span class="tier-pts">0</span>
+            <span>Nada acertado</span>
+            <span></span>
+        </div>
+        <div class="bb-tier-row tier-bonus">
+            <span class="tier-pts">+3</span>
+            <span>Bônus pênalti (mata-mata)</span>
+            <span></span>
+        </div>
+    </div>
+</div>
+
+@code {
+}
+
+<style>
+    .scoring-rules-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .scoring-rules-table {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .bb-tier-row {
+        display: flex;
+        padding: 12px 24px;
+        align-items: center;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .bb-tier-row:last-child {
+        border-bottom: none;
+    }
+
+    .tier-bonus {
+        background: color-mix(in oklab, var(--brand-strong) 8%, transparent);
+    }
+
+    .tier-pts {
+        font-weight: 600;
+        min-width: 32px;
+    }
+</style>

@@ -1,0 +1,61 @@
+<!-- Tab navigation for pool detail page -->
+<div class="pool-tab-nav">
+    <button type="button" class="t @(SelectedTab == PoolTab.Ranking ? "active" : "")"
+            @onclick='() => OnTabChanged.InvokeAsync(PoolTab.Ranking)'>Ranking</button>
+    <button type="button" class="t @(SelectedTab == PoolTab.Matches ? "active" : "")"
+            @onclick='() => OnTabChanged.InvokeAsync(PoolTab.Matches)'>Jogos</button>
+    <button type="button" class="t @(SelectedTab == PoolTab.Prize ? "active" : "")"
+            @onclick='() => OnTabChanged.InvokeAsync(PoolTab.Prize)'>Premiação</button>
+</div>
+
+@code {
+    [Parameter] public PoolTab SelectedTab { get; set; }
+    [Parameter] public EventCallback<PoolTab> OnTabChanged { get; set; }
+}
+
+<style>
+    /* Bloco de estilo global (não CSS isolation), então NÃO usar `:deep` aqui — ele
+       invalidaria as regras e os tabs ficariam sem estilo/cursor. */
+    .pool-tab-nav {
+        display: flex;
+        border-bottom: 1px solid var(--line);
+        padding: 0 40px;
+        gap: 8px;
+    }
+
+    .pool-tab-nav .t {
+        flex: 0 1 auto;
+        padding: 12px 18px;
+        margin-bottom: -1px;
+        background: transparent;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        border-radius: 8px 8px 0 0;
+        cursor: pointer;
+        color: var(--fg-2);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        transition: color 200ms ease, background 200ms ease, border-color 200ms ease;
+    }
+
+    .pool-tab-nav .t:hover {
+        color: var(--fg);
+        background: color-mix(in oklab, var(--brand-strong) 5%, transparent);
+    }
+
+    .pool-tab-nav .t.active {
+        color: var(--brand-strong);
+        border-bottom-color: var(--brand-strong);
+        font-weight: 600;
+    }
+
+    /* ─── Mobile (≤768px): alinha os tabs ao padding lateral de 16px ─────────
+       O padding 0 40px é inline; no mobile usamos 16px para casar com o resto
+       da página. Desktop permanece inalterado. */
+    @@media (max-width: 768px) {
+        .pool-tab-nav {
+            padding: 0 16px;
+        }
+    }
+</style>

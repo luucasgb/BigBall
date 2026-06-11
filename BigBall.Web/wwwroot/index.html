@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BigBall</title>
+    <base href="/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/tokens.css" />
+    <link rel="stylesheet" href="css/tokens-desktop.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/tokens-mobile.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+</head>
+
+<body class="theme-dark">
+    <div id="app">
+        <div class="bb-splash">Carregando BigBall…</div>
+    </div>
+
+    <div id="blazor-error-ui">
+        Ocorreu um erro inesperado.
+        <a href="" class="reload">Recarregar</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script>window.bigBallCopyToClipboard = (t) => navigator.clipboard.writeText(t);</script>
+    <script>
+        window.bigBallDayPicker = {
+            update(viewport) {
+                if (!viewport) return;
+                const wrap = viewport.parentElement;
+                if (!wrap) return;
+                const max = viewport.scrollWidth - viewport.clientWidth;
+                wrap.classList.toggle('can-scroll-left', viewport.scrollLeft > 4);
+                wrap.classList.toggle('can-scroll-right', viewport.scrollLeft < max - 4);
+            },
+            center(viewport) {
+                if (!viewport) return;
+                const active = viewport.querySelector('.day-picker-tile.active');
+                if (active) {
+                    active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+                if (!viewport.dataset.bbBound) {
+                    viewport.dataset.bbBound = '1';
+                    viewport.addEventListener('scroll', () => window.bigBallDayPicker.update(viewport), { passive: true });
+                }
+                // Refresh the edge fades once the smooth scroll settles.
+                setTimeout(() => window.bigBallDayPicker.update(viewport), 400);
+            }
+        };
+    </script>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,89 @@
+@* Prefer flagcdn.com SVG (crisp at any size, derived from the team Code). Fall back to FlashScore badge for unmapped codes, then to the hardcoded two-tone gradient. *@
+@using BigBall.Shared.WorldCup
+@{
+    var resolvedUrl = WorldCup2026TeamCodes.ToFlagUrl(Code) ?? ImageUrl;
+}
+@if (!string.IsNullOrEmpty(resolvedUrl))
+{
+    <img src="@resolvedUrl"
+         alt="@Code"
+         class="flag-img"
+         style="@ImgStyle"
+         loading="lazy"
+         decoding="async" />
+}
+else
+{
+    <div style="@GradientStyle">@Code</div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Code { get; set; } = "—";
+
+    /// <summary>Height of the badge in pixels. Width is derived from a 3:2 flag aspect ratio.</summary>
+    [Parameter] public int Size { get; set; } = 28;
+
+    /// <summary>Optional cached badge URL (e.g. from <see cref="BigBall.Web.Shared.State.TeamBadgeCache"/>).</summary>
+    [Parameter] public string? ImageUrl { get; set; }
+
+    private static readonly IReadOnlyDictionary<string, (string A, string B)> Palette =
+        new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["BRA"] = ("#009739", "#FEDF00"),
+            ["ARG"] = ("#75AADB", "#ffffff"),
+            ["FRA"] = ("#0055A4", "#EF4135"),
+            ["GER"] = ("#000000", "#DD0000"),
+            ["ESP"] = ("#AA151B", "#F1BF00"),
+            ["ENG"] = ("#ffffff", "#CE1124"),
+            ["POR"] = ("#006600", "#FF0000"),
+            ["NED"] = ("#AE1C28", "#21468B"),
+            ["MEX"] = ("#006847", "#CE1126"),
+            ["USA"] = ("#3C3B6E", "#B22234"),
+            ["CAN"] = ("#D80621", "#ffffff"),
+            ["URU"] = ("#7B9FD1", "#ffffff"),
+            ["CRO"] = ("#171796", "#ff0000"),
+            ["ITA"] = ("#008C45", "#CD212A"),
+            ["JPN"] = ("#BC002D", "#ffffff"),
+            ["KOR"] = ("#CD2E3A", "#0047A0"),
+            ["BEL"] = ("#000000", "#FAE042"),
+            ["SUI"] = ("#DA291C", "#ffffff"),
+            ["MAR"] = ("#C1272D", "#006233"),
+            ["SEN"] = ("#00853F", "#FDEF42"),
+            ["AUS"] = ("#00843D", "#FFCD00"),
+        };
+
+    private int Width => (int)Math.Round(Size * 1.5);
+
+    private string ImgStyle => string.Join(';',
+        $"width:{Width}px",
+        $"height:{Size}px",
+        "object-fit:cover",
+        "flex-shrink:0",
+        "background:rgba(255,255,255,0.04)",
+        "box-shadow:inset 0 0 0 1px rgba(0,0,0,0.12)");
+
+    private string GradientStyle
+    {
+        get
+        {
+            var (a, b) = Palette.TryGetValue(Code, out var found) ? found : ("#4a5a6a", "#2a3542");
+            var fontSize = (Size * 0.32).ToString("F0");
+            return string.Join(';',
+                $"width:{Width}px",
+                $"height:{Size}px",
+                $"background:linear-gradient(135deg,{a} 50%,{b} 50%)",
+                "display:flex",
+                "align-items:center",
+                "justify-content:center",
+                "flex-shrink:0",
+                "overflow:hidden",
+                "box-shadow:inset 0 0 0 1px rgba(0,0,0,0.12)",
+                $"font-size:{fontSize}px",
+                "font-weight:700",
+                "color:rgba(255,255,255,0.95)",
+                "text-shadow:0 1px 1px rgba(0,0,0,0.35)",
+                "letter-spacing:-0.02em",
+                "font-family:var(--font-display)");
+        }
+    }
+}

@@ -1,0 +1,124 @@
+@page "/"
+@layout DesktopAppLayout
+@using BigBall.Web.Shared.UI
+@inject HomeViewModel VM
+@inject BigBall.Client.Core.Abstractions.ITokenStore TokenStore
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="bb-content">
+            <PageHeader Title="Início"
+                        Eyebrow="BigBall · Copa do Mundo 2026"
+                        Subtitle="@(VM.FeaturedNextMatch is { } fn ? $"{PtCopy.ActivePoolsLine(VM.Pools.Count)} · palpites até o início ({TimeFormatting.FormatKickoff(fn.KickoffUtc)})" : null)" />
+
+            <div class="home-cols">
+                <div class="home-col-main">
+                    <div class="bb-dcard">
+                        <FeaturedMatchCard Next="@VM.FeaturedNextMatch"
+                                          PoolPredictions="@VM.FeaturedPoolPredictions"
+                                          IsBusy="@VM.IsBusy"
+                                          OnPredictionClick="poolId => VM.OpenPredictionCommand.Execute(poolId)" />
+                    </div>
+                    <div class="bb-dcard">
+                        <PoolsTable Pools="@VM.Pools"
+                                   IsBusy="@VM.IsBusy"
+                                   OnPoolClick="@OpenPool" />
+                    </div>
+                </div>
+
+                <div class="home-col-sidebar">
+                    @if (VM.Pools.Count > 0)
+                    {
+                        var best = VM.Pools.OrderBy(p => p.MyRank).First();
+                        <div class="bb-dcard">
+                            <BestPositionCard BestPool="@best" />
+                        </div>
+                    }
+                    <div class="bb-dcard home-sidebar-grow">
+                        <SummaryCard PoolCount="@VM.Pools.Count"
+                                    ErrorMessage="@VM.ErrorMessage" />
+                    </div>
+                    <div class="bb-dcard home-sidebar-grow">
+                        <ActivityFeed />
+                    </div>
+                </div>
+            </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        VM.PropertyChanged += OnVmChanged;
+        ((System.Collections.Specialized.INotifyCollectionChanged)VM.Pools).CollectionChanged += OnPoolsChanged;
+
+        var token = await TokenStore.GetTokenAsync();
+        if (string.IsNullOrEmpty(token))
+        {
+            Nav.NavigateTo("/login", replace: true);
+            return;
+        }
+        await VM.LoadCommand.ExecuteAsync(null);
+
+        if (VM.ErrorMessage is not null && string.IsNullOrEmpty(await TokenStore.GetTokenAsync()))
+            Nav.NavigateTo("/login", replace: true);
+    }
+
+    private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
+    private void OnPoolsChanged(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => InvokeAsync(StateHasChanged);
+    private void OpenPool(dynamic pool) => VM.OpenPoolCommand.Execute(pool);
+
+    public void Dispose()
+    {
+        VM.PropertyChanged -= OnVmChanged;
+        ((System.Collections.Specialized.INotifyCollectionChanged)VM.Pools).CollectionChanged -= OnPoolsChanged;
+    }
+}
+
+<style>
+    .home-cols {
+        padding: 0 40px 40px;
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+        align-items: stretch;
+    }
+
+    .home-col-main {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        min-width: 0;
+    }
+
+    .home-col-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .home-sidebar-grow {
+        flex: 1 1 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .home-sidebar-grow > :first-child {
+        flex: 1;
+        min-height: 0;
+    }
+
+    /* ─── Mobile (≤768px): coluna principal e sidebar empilhadas ─────────────
+       O grid 2fr/1fr e o padding lateral de 40px são inline, então venciam a
+       media query de tokens-mobile.css na cascata. Reaplicamos aqui, no mesmo
+       nível. Desktop permanece inalterado. */
+    @@media (max-width: 768px) {
+        .home-cols {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 0 16px 24px;
+            gap: 16px;
+        }
+    }
+</style>

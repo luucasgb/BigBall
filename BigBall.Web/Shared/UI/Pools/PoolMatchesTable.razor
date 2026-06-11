@@ -1,0 +1,205 @@
+@* Vertically scrollable list of a pool's matches: each row shows the member's prediction
+   side by side with the real (reference) score. Matches without a result yet show the
+   kickoff date/time instead of the score column. *@
+@using System.Globalization
+@using BigBall.Shared.Dtos
+@using BigBall.Web.Shared.State
+@using BigBall.Web.Shared.UI.Primitives
+@inject TeamBadgeCache TeamBadges
+@inject IUserTimeZoneProvider Tz
+
+<div class="bb-dcard pool-matches-card">
+    @if (Matches == null || Matches.Count == 0)
+    {
+        <div class="pool-matches-empty">
+            <span class="bb-empty">Nenhum jogo disponível.</span>
+        </div>
+    }
+    else
+    {
+        <div class="pool-matches-list">
+            @foreach (var m in Matches)
+            {
+                var hasResult = m.ReferenceHome is not null && m.ReferenceAway is not null;
+                <div class="pool-match-row">
+                    <div class="pool-match-phase">@MatchLabels.ForMatch(m.Phase, m.GroupLabel)</div>
+                    <div class="pool-match-teams">
+                        <div class="pool-match-team">
+                            <Flag Code="@m.HomeCode" Size="20" ImageUrl="@(TeamBadges.GetBadgeUrlSmall(m.HomeCode) ?? TeamBadges.GetBadgeUrl(m.HomeCode))" />
+                            <span class="pool-match-team-name">@TeamNames.Display(m.HomeCode)</span>
+                        </div>
+                        <div class="pool-match-team">
+                            <Flag Code="@m.AwayCode" Size="20" ImageUrl="@(TeamBadges.GetBadgeUrlSmall(m.AwayCode) ?? TeamBadges.GetBadgeUrl(m.AwayCode))" />
+                            <span class="pool-match-team-name">@TeamNames.Display(m.AwayCode)</span>
+                        </div>
+                    </div>
+                    <div class="pool-match-scores">
+                        <div class="pool-match-score-col">
+                            <div class="pool-match-score-label">Palpite</div>
+                            <div class="pool-match-score-val @(m.MyPrediction is null ? "is-empty" : "")">
+                                @(m.MyPrediction is { } p ? $"{p.Home} × {p.Away}" : "—")
+                            </div>
+                        </div>
+                        @if (hasResult)
+                        {
+                            <div class="pool-match-score-col">
+                                <div class="pool-match-score-label">Resultado</div>
+                                <div class="pool-match-score-val is-result">@m.ReferenceHome × @m.ReferenceAway</div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="pool-match-score-col">
+                                <div class="pool-match-score-label">Início</div>
+                                <div class="pool-match-score-val is-kickoff">@FormatKickoff(m.KickoffUtc)</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<PoolMatchRowDto>? Matches { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await TeamBadges.EnsureLoadedAsync();
+    }
+
+    private string FormatKickoff(DateTime kickoffUtc)
+    {
+        var local = Tz.ToLocal(kickoffUtc);
+        return $"{local:dd} {PtDates.AbbreviatedMonth(local.Month)} · {local:HH:mm}";
+    }
+}
+
+<style>
+    .pool-matches-card {
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .pool-matches-list {
+        max-height: 560px;
+        overflow-y: auto;
+    }
+
+    .pool-matches-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+    }
+
+    .pool-match-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .pool-match-row:last-child {
+        border-bottom: none;
+    }
+
+    .pool-match-phase {
+        width: 96px;
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--fg-3);
+        letter-spacing: 0.02em;
+        line-height: 1.3;
+    }
+
+    .pool-match-teams {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .pool-match-team {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .pool-match-team + .pool-match-team {
+        margin-top: 6px;
+    }
+
+    .pool-match-team-name {
+        font-size: 14px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .pool-match-scores {
+        display: flex;
+        gap: 20px;
+        flex-shrink: 0;
+    }
+
+    .pool-match-score-col {
+        min-width: 64px;
+        text-align: center;
+    }
+
+    .pool-match-score-label {
+        font-size: 10px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--fg-3);
+        margin-bottom: 4px;
+    }
+
+    .pool-match-score-val {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 16px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .pool-match-score-val.is-empty {
+        color: var(--fg-3);
+        font-weight: 500;
+    }
+
+    .pool-match-score-val.is-result {
+        color: var(--brand-strong);
+    }
+
+    .pool-match-score-val.is-kickoff {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--fg-2);
+        white-space: nowrap;
+    }
+
+    /* ─── Mobile (≤768px): hide the phase column so teams + scores fit ────── */
+    @@media (max-width: 768px) {
+        .pool-match-phase {
+            display: none;
+        }
+
+        .pool-match-row {
+            gap: 12px;
+            padding: 12px 14px;
+        }
+
+        .pool-match-scores {
+            gap: 12px;
+        }
+
+        .pool-match-score-col {
+            min-width: 52px;
+        }
+    }
+</style>

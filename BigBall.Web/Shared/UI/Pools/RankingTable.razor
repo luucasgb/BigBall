@@ -111,12 +111,14 @@
         color: var(--fg-2);
     }
 
-    /* Table overrides */
-    .ranking-table-container :deep .bb-table {
+    /* Table overrides — bloco de estilo global (não CSS isolation), então `:deep` não
+       funciona. Usamos seletores descendentes reais com especificidade suficiente para
+       vencer o global `.bb-table th/td` (senão o th herda text-align:left e desalinha das células). */
+    .ranking-table-container .bb-table {
         margin: 0;
     }
 
-    .ranking-table-container :deep th {
+    .ranking-table-container .bb-table th {
         padding: 12px;
         text-align: left;
         font-weight: 600;
@@ -126,7 +128,7 @@
         letter-spacing: 0.04em;
     }
 
-    .ranking-table-container :deep td {
+    .ranking-table-container .bb-table td {
         padding: 12px;
         color: var(--fg-2);
     }
@@ -136,14 +138,14 @@
         padding-left: 24px !important;
     }
 
-    .col-rank :deep th {
-        padding-left: 24px !important;
-    }
-
     .col-member {
         flex: 1;
     }
 
+    /* Colunas numéricas alinhadas à direita — cabeçalho (com especificidade > global) e células. */
+    .ranking-table-container .bb-table th.col-score,
+    .ranking-table-container .bb-table th.col-trend,
+    .ranking-table-container .bb-table th.col-total,
     .col-score,
     .col-trend,
     .col-total {
@@ -153,15 +155,6 @@
     .col-total {
         padding-right: 24px !important;
         width: 80px;
-    }
-
-    .col-score :deep th {
-        text-align: right;
-    }
-
-    .col-trend :deep th,
-    .col-total :deep th {
-        text-align: right;
     }
 
     /* Row styling */

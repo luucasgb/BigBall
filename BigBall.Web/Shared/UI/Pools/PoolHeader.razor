@@ -4,7 +4,7 @@
         <Icon Path="@IconPaths.Trophy" Size="28" />
     </div>
     <div class="pool-header-text">
-        <div class="bb-page-eyebrow">Bolão · @Visibility</div>
+        <div class="bb-page-eyebrow">Bolão · @VisibilityLabel</div>
         <div class="bb-page-title">@Name</div>
         @if (!string.IsNullOrEmpty(PrizeDescription))
         {
@@ -26,6 +26,13 @@
     [Parameter] public string? PrizeDescription { get; set; }
     [Parameter] public List<string>? MemberNames { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }
+
+    private string VisibilityLabel => Visibility?.Trim().ToLowerInvariant() switch
+    {
+        "private" => "Privado",
+        "public" => "Público",
+        _ => Visibility ?? ""
+    };
 }
 
 <style>

@@ -218,6 +218,13 @@
         background: var(--chip-bg);
         color: var(--fg);
         font: inherit;
+        color-scheme: dark;
+    }
+
+    /* Sem isto, as opções herdam o texto creme do tema sobre o fundo branco padrão do navegador. */
+    select.bb-input option {
+        background: var(--bg-elev);
+        color: var(--fg);
     }
     .bb-modal-err {
         font-size: 13px;

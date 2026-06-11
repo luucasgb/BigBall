@@ -24,7 +24,7 @@
                 {
                     <tr class="pools-table-row"
                         @onclick="() => OnPoolClick.InvokeAsync(pool)">
-                        <td>
+                        <td data-label="Bolão">
                             <div class="pools-table-name">
                                 <div class="pools-table-icon" data-rank="@pool.MyRank">
                                     <Icon Path="@IconPaths.Trophy" Size="16" />
@@ -32,7 +32,7 @@
                                 <div class="pools-table-name-text">@pool.Name</div>
                             </div>
                         </td>
-                        <td class="pools-table-next-match">
+                        <td class="pools-table-next-match" data-label="Próximo jogo">
                             @if (pool.NextMatch is { } nm)
                             {
                                 @($"{nm.HomeCode} × {nm.AwayCode} · {TimeFormatting.FormatKickoff(nm.KickoffUtc)}")
@@ -42,16 +42,16 @@
                                 <span>—</span>
                             }
                         </td>
-                        <td>
+                        <td data-label="Líder">
                             <div class="pools-table-leader">
                                 <Avatar Name="@pool.Leader.Name" Size="22" />
                                 <span class="pools-table-leader-name">@pool.Leader.Name</span>
                                 <span class="pools-table-leader-points">@pool.Leader.Points</span>
                             </div>
                         </td>
-                        <td class="num pools-table-rank" data-rank="@pool.MyRank">#@pool.MyRank</td>
-                        <td class="num">@pool.MyPoints</td>
-                        <td class="num pools-table-member-count">@pool.MemberCount</td>
+                        <td class="num pools-table-rank" data-rank="@pool.MyRank" data-label="Posição">#@pool.MyRank</td>
+                        <td class="num" data-label="Pontos">@pool.MyPoints</td>
+                        <td class="num pools-table-member-count" data-label="Membros">@pool.MemberCount</td>
                     </tr>
                 }
             </tbody>

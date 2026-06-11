@@ -29,10 +29,10 @@
                 @foreach (var row in Rows)
                 {
                 <tr class="@(row.IsMe ? "is-me" : "")">
-                    <td class="col-rank">
+                    <td class="col-rank" data-label="#">
                         <span class="rank-number @(row.Rank == 1 ? "rank-first" : "")">@row.Rank</span>
                     </td>
-                    <td class="col-member">
+                    <td class="col-member" data-label="Membro">
                         <div class="member-cell">
                             <Avatar Name="@row.Name" Size="32" />
                             <div class="member-info">
@@ -51,18 +51,18 @@
                             </div>
                         </div>
                     </td>
-                    <td class="col-score @(row.Tier20Count >= 3 ? "score-highlight" : "")">@row.Tier20Count×</td>
-                    <td class="col-score">@row.Tier16Count×</td>
-                    <td class="col-score">@row.Tier15Count×</td>
-                    <td class="col-score">@row.Tier10Count×</td>
-                    <td class="col-score">@row.Tier5Count×</td>
-                    <td class="col-score">@row.PenaltyBonusCount×</td>
-                    <td class="col-trend">
+                    <td class="col-score @(row.Tier20Count >= 3 ? "score-highlight" : "")" data-label="20 pts">@row.Tier20Count×</td>
+                    <td class="col-score" data-label="16 pts">@row.Tier16Count×</td>
+                    <td class="col-score" data-label="15 pts">@row.Tier15Count×</td>
+                    <td class="col-score" data-label="10 pts">@row.Tier10Count×</td>
+                    <td class="col-score" data-label="5 pts">@row.Tier5Count×</td>
+                    <td class="col-score" data-label="+3 pen.">@row.PenaltyBonusCount×</td>
+                    <td class="col-trend" data-label="Última">
                         <span class="@(row.TrendLastMatch > 0 ? "trend-positive" : "trend-neutral")">
                             @(row.TrendLastMatch > 0 ? $"+{row.TrendLastMatch}" : "—")
                         </span>
                     </td>
-                    <td class="col-total @(row.Rank == 1 ? "total-highlight" : "")">@row.Points</td>
+                    <td class="col-total @(row.Rank == 1 ? "total-highlight" : "")" data-label="Total">@row.Points</td>
                 </tr>
                 }
             }

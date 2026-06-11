@@ -3,10 +3,20 @@
 @implements IDisposable
 
 <div class="bb-desk theme-dark">
-    <Sidebar Active="@_active" />
+    <div class="bb-sidebar-wrap @(_drawerOpen ? "open" : "")">
+        <Sidebar Active="@_active" />
+    </div>
     <main class="bb-main">
+        <div class="bb-mobile-appbar bb-mobile-only">
+            <button type="button" class="bb-iconbtn" @onclick="OpenDrawer" aria-label="Abrir menu">
+                <Icon Path="@IconPaths.Menu" Size="20" />
+            </button>
+            <div class="bb-mobile-brand">BigBall</div>
+        </div>
         @Body
     </main>
+    <div class="bb-drawer-backdrop @(_drawerOpen ? "open" : "")" @onclick="CloseDrawer"></div>
+    <BottomNav Active="@_active" />
     <CreatePoolModalHost />
     <JoinPoolModalHost />
     <ProfileEditModalHost />
@@ -14,6 +24,7 @@
 
 @code {
     private string _active = "dashboard";
+    private bool _drawerOpen;
 
     protected override void OnInitialized()
     {
@@ -21,9 +32,14 @@
         _active = DeskSidebarActive.FromPath(Nav.ToBaseRelativePath(Nav.Uri));
     }
 
+    private void OpenDrawer() => _drawerOpen = true;
+
+    private void CloseDrawer() => _drawerOpen = false;
+
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         _active = DeskSidebarActive.FromPath(Nav.ToBaseRelativePath(e.Location));
+        _drawerOpen = false; // fecha o drawer ao navegar (mobile)
         InvokeAsync(StateHasChanged);
     }
 

@@ -1,0 +1,352 @@
+/* BigBall — camada responsiva (mobile).
+   Sobrescreve as classes globais existentes via @media. Carregado por último em
+   index.html, depois de app.css, para vencer a cascata.
+
+   Convenção de breakpoint: --bp-mobile = 768px (literal usado nos media queries). */
+:root { --bp-mobile: 768px; }
+
+/* ─── Estado base (desktop): esconder o chrome mobile ─────────────────────── */
+/* A sidebar fica como filho-grade direto no desktop (display:contents faz o
+   wrapper desaparecer), preservando o layout atual sem regressão. */
+.bb-sidebar-wrap { display: contents; }
+.bb-mobile-only { display: none; }
+.bb-mobile-appbar { display: none; }
+.bb-drawer-backdrop { display: none; }
+.bb-bottomnav { display: none; } /* sobrescreve o display:flex de tokens.css */
+
+/* ════════════════════════════════════════════════════════════════════════
+   MOBILE  (≤ 768px)
+   ════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ─── Shell / grade base ────────────────────────────────────────────── */
+  /* minmax(0,1fr) impede que a coluna cresça além da viewport por conta do
+     min-width:auto de tracks de grid (causa de overflow horizontal). */
+  .bb-desk {
+    grid-template-columns: minmax(0, 1fr);
+    height: 100vh;
+  }
+
+  /* Em mobile o container principal é o único elemento de rolagem. */
+  .bb-main {
+    display: block;
+    min-width: 0;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 84px; /* espaço para a bottom nav fixa */
+  }
+
+  /* Páginas que tinham seu próprio scroll interno passam a fluir naturalmente. */
+  .bb-content {
+    display: block;
+    flex: none;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  /* ─── App bar mobile (hambúrguer + marca) ───────────────────────────── */
+  .bb-mobile-only { display: revert; }
+
+  .bb-mobile-appbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in oklab, var(--bg) 92%, #000);
+    position: sticky;
+    top: 0;
+    z-index: 80;
+  }
+  .bb-mobile-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+
+  /* ─── Sidebar → drawer deslizante ───────────────────────────────────── */
+  .bb-sidebar-wrap {
+    display: block;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 280px;
+    max-width: 85vw;
+    z-index: 1100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  .bb-sidebar-wrap.open { transform: translateX(0); }
+  .bb-sidebar-wrap .sidebar-frame {
+    height: 100%;
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+  }
+
+  .bb-drawer-backdrop.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  /* ─── Bottom nav fixa ───────────────────────────────────────────────── */
+  .bb-bottomnav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    height: auto;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ─── Topbar / page header: paddings menores + alvos de toque ───────── */
+  .bb-topbar {
+    height: auto;
+    min-height: 56px;
+    padding: 10px 16px;
+    flex-wrap: wrap;
+  }
+  .bb-topbar-actions { gap: 8px; flex-wrap: wrap; }
+  .bb-topbar-btn { min-height: 44px; }
+
+  .bb-page-h,
+  .page-header {
+    padding: 16px 16px 12px;
+    flex-wrap: wrap;
+  }
+  .bb-page-title { font-size: 24px; }
+
+  /* Abas (ranking / pool tabs) roláveis horizontalmente, alvo ≥44px. */
+  .bb-tab-row {
+    padding: 0 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .bb-tab-row::-webkit-scrollbar { display: none; }
+  .bb-tab-row .t { min-height: 44px; white-space: nowrap; }
+
+  .bb-nav-item { min-height: 44px; }
+
+  /* Stepper de placar com alvos de toque maiores. */
+  .bb-stepper button { width: 44px; height: 44px; }
+
+  /* Cards desktop com padding um pouco menor. */
+  .bb-dcard { padding: 14px; }
+
+  /* ═══ FASE 2 — grids de página em coluna única ═══════════════════════ */
+  .home-cols,
+  .profile-layout,
+  .calendar-layout,
+  .pool-detail-layout,
+  .about-layout {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 16px;
+    padding-right: 16px;
+    gap: 16px;
+  }
+  /* Filhos de grid/flex precisam poder encolher abaixo do min-content. */
+  .home-col-main, .home-col-sidebar,
+  .profile-column-left, .profile-column-center, .profile-column-right,
+  .pool-detail-main, .pool-detail-sidebar,
+  .about-col { min-width: 0; }
+  .home-cols { padding-bottom: 24px; }
+  .profile-layout { padding-bottom: 24px; }
+  .about-layout { padding-bottom: 24px; max-width: none; }
+  .pool-detail-layout { padding: 16px 16px 24px; }
+
+  /* Calendário: deixar o conteúdo fluir em vez de scroll interno por painel. */
+  .calendar-layout {
+    overflow: visible;
+    min-height: 0;
+  }
+  .calendar-detail-card,
+  .calendar-detail-body { overflow: visible; }
+  .match-list-panel { overflow: visible; }
+  .match-list-panel-body { overflow: visible; flex: none; }
+
+  /* Auth: padding do card reduzido. */
+  .bb-auth-page { padding: 16px; }
+  .bb-auth-card { padding: 24px; }
+
+  /* ═══ FASE 3 — tabelas viram cards ═══════════════════════════════════ */
+  .bb-table thead { display: none; }
+  .bb-table,
+  .bb-table tbody,
+  .bb-table tr,
+  .bb-table td { display: block; width: auto; }
+
+  .bb-table tr {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+  }
+  .bb-table tr:hover td { background: transparent; }
+  .bb-table tr:last-child { margin-bottom: 0; }
+
+  .bb-table td {
+    border-bottom: none;
+    padding: 6px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: right;
+    white-space: normal;
+  }
+  .bb-table td::before {
+    content: attr(data-label);
+    color: var(--fg-3);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+    flex-shrink: 0;
+  }
+  /* Células de número herdam alinhamento à direita; mantemos o valor à direita. */
+  .bb-table td.num { text-align: right; }
+
+  /* — RankingTable — célula "Membro" como cabeçalho do card — */
+  .ranking-table-container .bb-table td {
+    padding: 6px 0 !important;
+    white-space: normal !important;
+  }
+  .ranking-table-container .bb-table td.col-rank,
+  .ranking-table-container .bb-table td.col-total { padding-left: 0 !important; padding-right: 0 !important; }
+  .ranking-table-container .bb-table td.col-member {
+    justify-content: flex-start;
+    padding-bottom: 10px !important;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ranking-table-container .bb-table td.col-member::before { display: none; }
+  .ranking-table-container .bb-table td.col-total {
+    margin-top: 4px;
+    border-top: 1px solid var(--line);
+    padding-top: 8px !important;
+  }
+  .ranking-table-header { padding: 14px 16px; }
+
+  /* — PoolsTable — cabeçalho "Bolão" em destaque — */
+  .pools-table-container .bb-table td:first-child {
+    justify-content: flex-start;
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .pools-table-container .bb-table td:first-child::before { display: none; }
+
+  /* — ActivityTable — partida como cabeçalho do card — */
+  .activity-table-td-match {
+    justify-content: flex-start;
+    padding-bottom: 10px !important;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  .activity-table-td-match::before { display: none; }
+  .activity-table-header { padding: 14px 16px; }
+
+  /* ═══ FASE 4 — componentes pesados ═══════════════════════════════════ */
+
+  /* MatchListItem: empilha tempo / times / status verticalmente. */
+  .match-list-item {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 14px 16px;
+  }
+  .match-list-item-teams { width: 100%; }
+  .match-list-item-venue { flex-basis: 100%; order: 3; }
+  .match-list-item-status { min-width: 0; margin-left: auto; }
+
+  /* FeaturedMatchCard: reduz flags/“vs” e empilha as linhas de bolão. */
+  .featured-match-card-display { padding: 20px 16px; gap: 12px; }
+  .featured-match-vs { font-size: 40px; margin: 4px 0; }
+  .featured-match-team-code { font-size: 18px; }
+  .featured-match-card-footer { padding: 14px 16px; }
+  .featured-match-pools {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .featured-match-pool-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .featured-match-pool-name { flex: 1; min-width: 120px; }
+  .featured-match-pool-action { justify-self: auto; min-height: 44px; }
+
+  /* CalendarDetailHeader: flags e “vs” um pouco menores. */
+  .calendar-detail-header { padding: 16px; }
+  .calendar-detail-teams { gap: 10px; }
+  .calendar-detail-vs-label { font-size: 28px; }
+  .calendar-detail-team-name { font-size: 15px; }
+
+  /* ProfileHero: empilha avatar/info e KPIs. */
+  .profile-hero { padding: 0 16px 16px; }
+  .profile-hero-container {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+    gap: 18px;
+  }
+  .profile-hero-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    width: 100%;
+  }
+  .profile-hero-name { font-size: 28px; }
+  .profile-kpis {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    width: 100%;
+  }
+  .profile-kpi-value { font-size: 28px; }
+
+  /* PoolHeader: permite wrap dos avatares/ações. */
+  .pool-header {
+    flex-wrap: wrap;
+    padding: 16px;
+    gap: 14px;
+  }
+  .pool-header-icon { width: 48px; height: 48px; }
+
+  /* Ações de conta (Perfil) empilhadas. */
+  .profile-account-actions { flex-direction: column; }
+
+  /* ═══ FASE 5 — modais viram bottom sheets ════════════════════════════ */
+  .bb-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .bb-modal-panel {
+    max-width: 100%;
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 18px 18px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+  .bb-modal-actions { flex-wrap: wrap; }
+  /* Form de criar bolão com grade interna 1fr/1fr → coluna única. */
+  .bb-vis-track { grid-template-columns: 1fr 1fr; } /* mantém o toggle */
+}

@@ -459,4 +459,23 @@
     .profile-error {
         color: var(--danger);
     }
+
+    /* ─── Mobile (≤768px): colunas empilhadas em coluna única ────────────────
+       O <style> inline do componente vence a media query de tokens-mobile.css
+       na cascata (renderiza depois do <link> no <head>), então o grid de 3
+       colunas e o padding lateral de 40px persistiam no mobile. Reaplicamos
+       aqui, no mesmo nível de cascata. Desktop permanece inalterado. */
+    @@media (max-width: 768px) {
+        .profile-layout {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 0 16px 24px;
+            gap: 16px;
+        }
+
+        .profile-column-left,
+        .profile-column-center,
+        .profile-column-right {
+            min-width: 0;
+        }
+    }
 </style>

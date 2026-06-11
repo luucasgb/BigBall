@@ -82,4 +82,22 @@
         color: var(--fg);
         font-weight: 600;
     }
+
+    @@media (max-width: 768px) {
+        .about-layout {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 0 16px 24px;
+            gap: 16px;
+            max-width: none;
+        }
+
+        .about-col {
+            min-width: 0;
+        }
+
+        .about-intro,
+        .about-steps {
+            overflow-wrap: anywhere;
+        }
+    }
 </style>

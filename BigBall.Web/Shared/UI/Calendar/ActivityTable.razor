@@ -21,14 +21,14 @@
             @foreach (var row in Items)
             {
                 <tr>
-                    <td class="activity-table-td-match">
+                    <td class="activity-table-td-match" data-label="Partida">
                         <div class="activity-table-match-name">@row.Match</div>
                         <div class="activity-table-match-when">@row.When</div>
                     </td>
-                    <td class="activity-table-td-pool">@row.Pool</td>
-                    <td class="activity-table-td-num">@row.Result</td>
-                    <td class="activity-table-td-num">@row.Prediction</td>
-                    <td class="activity-table-td-points activity-table-points-color" style="color:@GetPointsColor(row.Points);">@FormatPoints(row.Points)</td>
+                    <td class="activity-table-td-pool" data-label="Bolão">@row.Pool</td>
+                    <td class="activity-table-td-num" data-label="Resultado">@row.Result</td>
+                    <td class="activity-table-td-num" data-label="Palpite">@row.Prediction</td>
+                    <td class="activity-table-td-points activity-table-points-color" data-label="Pts" style="color:@GetPointsColor(row.Points);">@FormatPoints(row.Points)</td>
                 </tr>
             }
         </tbody>

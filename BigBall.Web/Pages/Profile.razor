@@ -8,16 +8,14 @@
 @inject IPoolsApi PoolsApi
 @inject ITokenStore TokenStore
 @inject IUserProfileStore UserProfileStore
+@inject IUserTimeZoneProvider Tz
+@inject IProfileEditDialogService EditDialog
 @inject NavigationManager Nav
+@implements IDisposable
 
 <DesktopTopbar Placeholder="Buscar membros, partidas, palpites…" />
 
-<PageHeader Title="Perfil" Eyebrow="Conta">
-            <Actions>
-                <button class="bb-topbar-btn"><Icon Path="@IconPaths.Share" Size="16" /> Compartilhar</button>
-                <button class="bb-topbar-btn primary"><Icon Path="@IconPaths.Pen" Size="16" /> Editar</button>
-            </Actions>
-</PageHeader>
+<PageHeader Title="Perfil" Eyebrow="Conta" />
 
 <div class="bb-content">
             @if (_isBusy)
@@ -36,7 +34,7 @@
                 Handle="@GetHandleFromEmail(_profile.Email)"
                 Email="@_profile.Email"
                 MemberSince="@FormatMemberSince(_profile.CreateDate)"
-                Timezone="America/São_Paulo (BRT)"
+                Timezone="@Tz.Label"
                 AdminOfLabel="@_adminOfLabel"
                 MemberLabel="@_memberLabel"
                 KpiItems="@_kpiItems" />
@@ -45,22 +43,21 @@
                 <div class="profile-column-left">
                     <ScoringBandsCard
                         Title="Pontos por faixa"
-                        Subtitle="dados de exemplo (resumo global em breve)"
-                        Items="@ScoringBandItems" />
+                        Items="@_scoringBands" />
 
                     <SubmissionsCard
                         Title="Palpites enviados"
-                        Count="0"
-                        Total="0"
-                        FooterLeft="Estatística global em breve"
-                        FooterRight="—" />
+                        Count="@_submittedCount"
+                        Total="@_eligibleCount"
+                        FooterLeft="Jogos com palpite seu"
+                        FooterRight="@($"{_eligibleCount} no torneio")" />
                 </div>
 
                 <div class="profile-column-center">
                     <ActivityTable
                         Title="Atividade de palpites"
-                        ViewAllLabel="Ver tudo"
-                        Items="@ActivityItems" />
+                        ViewAllLabel=""
+                        Items="@_activityItems" />
 
                     <MyPoolsCard
                         Title="Meus bolões"
@@ -150,6 +147,11 @@
     private string _memberLabel = string.Empty;
     private bool _loggingOut;
 
+    private IReadOnlyList<ScoringBandsCard.BandItem> _scoringBands = EmptyBands;
+    private IReadOnlyList<ActivityTable.ActivityRow> _activityItems = [];
+    private int _submittedCount;
+    private int _eligibleCount;
+
     private bool _showDeleteModal;
     private bool _deleting;
     private string _deleteConfirmText = string.Empty;
@@ -160,6 +162,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        UserProfileStore.SnapshotChanged += OnProfileChanged;
+        Tz.Changed += OnTimeZoneChanged;
+
         if (string.IsNullOrEmpty(await TokenStore.GetTokenAsync()))
         {
             Nav.NavigateTo("/login", replace: true);
@@ -193,7 +198,7 @@
             _poolItems = pools
                 .Select(p => new MyPoolsCard.PoolItem(p.Name, p.MemberCount, false, p.MyRank, p.MyPoints))
                 .ToList();
-            _accountSettingsItems = BuildAccountSettings(_profile);
+            _accountSettingsItems = BuildAccountSettings();
         }
         catch (Exception ex)
         {
@@ -203,13 +208,90 @@
         {
             _isBusy = false;
         }
+
+        await LoadStatsAsync();
     }
 
-    private static IReadOnlyList<AccountSettingsCard.SettingRow> BuildAccountSettings(ProfileDto p) =>
+    private async Task LoadStatsAsync()
+    {
+        try
+        {
+            var stats = await AuthApi.GetMyStatsAsync();
+            _submittedCount = stats.SubmittedCount;
+            _eligibleCount = stats.EligibleCount;
+            _scoringBands = stats.Bands
+                .Select(b => new ScoringBandsCard.BandItem(b.Tier, BandLabel(b.Tier), b.Count))
+                .ToList();
+            _activityItems = stats.RecentActivity.Select(MapActivity).ToList();
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Estatísticas indisponíveis: mantém os defaults (zeros / vazio) sem quebrar o perfil.
+        }
+    }
+
+    private ActivityTable.ActivityRow MapActivity(ProfileActivityRowDto a)
+    {
+        var local = Tz.ToLocal(a.KickoffUtc);
+        var when = $"{PtDates.AbbreviatedDay(local.DayOfWeek)} {local:dd} {PtDates.AbbreviatedMonth(local.Month)}";
+        var result = a is { ResultHome: { } rh, ResultAway: { } ra } ? $"{rh}–{ra}" : "—";
+        return new ActivityTable.ActivityRow(
+            $"{a.HomeCode} × {a.AwayCode}",
+            a.PoolName,
+            result,
+            $"{a.PredHome}–{a.PredAway}",
+            a.Points,
+            when);
+    }
+
+    private IReadOnlyList<AccountSettingsCard.SettingRow> BuildAccountSettings() =>
     [
-        new(IconPaths.User, "Nome de exibição", p.DisplayName),
-        new(IconPaths.Bell, "Notificações", "Fechamento no apito · resultados"),
-        new(IconPaths.Globe, "Fuso horário", "America/São_Paulo (BRT)")
+        new(IconPaths.User, "Nome de exibição", _profile?.DisplayName ?? "",
+            EventCallback.Factory.Create(this, () => EditDialog.Open(ProfileEditField.DisplayName))),
+        new(IconPaths.Globe, "Fuso horário", Tz.Label,
+            EventCallback.Factory.Create(this, () => EditDialog.Open(ProfileEditField.TimeZone)))
+    ];
+
+    private void OnProfileChanged()
+    {
+        _profile = UserProfileStore.Snapshot;
+        _accountSettingsItems = BuildAccountSettings();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnTimeZoneChanged()
+    {
+        // Rótulo do fuso na linha "Fuso horário" e os horários da atividade dependem do fuso atual.
+        _accountSettingsItems = BuildAccountSettings();
+        InvokeAsync(StateHasChanged);
+        _ = LoadStatsAsync();
+    }
+
+    public void Dispose()
+    {
+        UserProfileStore.SnapshotChanged -= OnProfileChanged;
+        Tz.Changed -= OnTimeZoneChanged;
+    }
+
+    private static string BandLabel(int tier) => tier switch
+    {
+        20 => "Placar exato",
+        16 => "Vencedor + saldo",
+        15 => "Vencedor + 1 placar",
+        10 => "Apenas vencedor",
+        5  => "Apenas 1 placar",
+        _  => "Sem pontos",
+    };
+
+    private static readonly IReadOnlyList<ScoringBandsCard.BandItem> EmptyBands =
+    [
+        new(20, "Placar exato", 0),
+        new(16, "Vencedor + saldo", 0),
+        new(15, "Vencedor + 1 placar", 0),
+        new(10, "Apenas vencedor", 0),
+        new(5,  "Apenas 1 placar", 0),
+        new(0,  "Sem pontos", 0)
     ];
 
     private static IReadOnlyList<ProfileKpis.KpiItem> BuildKpiItems(IReadOnlyList<MyPoolDto> pools)
@@ -310,20 +392,6 @@
         }
     }
 
-    private static readonly IReadOnlyList<ScoringBandsCard.BandItem> ScoringBandItems =
-    [
-        new(20, "Placar exato", 0),
-        new(16, "Vencedor + saldo", 0),
-        new(15, "Vencedor + 1 placar", 0),
-        new(10, "Apenas vencedor", 0),
-        new(5,  "Apenas 1 placar", 0),
-        new(0,  "Sem pontos", 0)
-    ];
-
-    private static readonly IReadOnlyList<ActivityTable.ActivityRow> ActivityItems =
-    [
-        new("—",  "—",  "—", "—", 0, "Dados de exemplo")
-    ];
 }
 
 <style>

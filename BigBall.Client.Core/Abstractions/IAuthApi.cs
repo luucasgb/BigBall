@@ -8,5 +8,7 @@ public interface IAuthApi
     Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default);
     Task<OAuthRedirectUrlResponse> GetGoogleUrlAsync(string redirectTo, CancellationToken ct = default);
     Task<ProfileDto> GetMyProfileAsync(CancellationToken ct = default);
+    Task<ProfileDto> UpdateMyProfileAsync(UpdateProfileRequest request, CancellationToken ct = default);
+    Task<ProfileStatsDto> GetMyStatsAsync(CancellationToken ct = default);
     Task DeleteAccountAsync(CancellationToken ct = default);
 }

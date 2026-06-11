@@ -5,7 +5,8 @@
     </div>
     @foreach (var (row, idx) in Items.Select((r, i) => (r, i)))
     {
-        <div class="account-settings-row @(idx < Items.Count - 1 ? "account-settings-row-border" : "")">
+        <div class="account-settings-row @(idx < Items.Count - 1 ? "account-settings-row-border" : "") @(row.OnClick.HasDelegate ? "account-settings-row-clickable" : "")"
+             @onclick="row.OnClick">
             <div class="account-settings-icon">
                 <Icon Path="@row.Icon" Size="18" />
             </div>
@@ -13,15 +14,18 @@
                 <div class="account-settings-label">@row.Label</div>
                 <div class="account-settings-value">@row.Value</div>
             </div>
-            <span class="account-settings-chevron">
-                <Icon Path="@IconPaths.Chevron" Size="16" />
-            </span>
+            @if (row.OnClick.HasDelegate)
+            {
+                <span class="account-settings-chevron">
+                    <Icon Path="@IconPaths.Chevron" Size="16" />
+                </span>
+            }
         </div>
     }
 </div>
 
 @code {
-    public record SettingRow(string Icon, string Label, string Value);
+    public record SettingRow(string Icon, string Label, string Value, EventCallback OnClick = default);
 
     [Parameter] public string Title { get; set; } = "Conta";
     [Parameter] public IReadOnlyList<SettingRow> Items { get; set; } = [];
@@ -45,7 +49,14 @@
         align-items: center;
         gap: 12px;
         padding: 14px 20px;
+    }
+
+    .account-settings-row-clickable {
         cursor: pointer;
+    }
+
+    .account-settings-row-clickable:hover {
+        background: var(--chip-bg);
     }
 
     .account-settings-row-border {

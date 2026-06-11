@@ -7,6 +7,7 @@
 @inject IMatchesApi MatchesApi
 @inject IPoolsApi PoolsApi
 @inject IPredictionsApi PredictionsApi
+@inject IUserTimeZoneProvider Tz
 
 <DesktopTopbar Placeholder="Buscar partida ou seleção…" />
 
@@ -184,6 +185,7 @@
 
     public void Dispose()
     {
+        Tz.Changed -= OnTimeZoneChanged;
         _feedbackCts?.Cancel();
         _feedbackCts?.Dispose();
     }
@@ -235,9 +237,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Tz.Changed += OnTimeZoneChanged;
         await Task.WhenAll(LoadAsync(), LoadMyPoolsAsync());
         ApplyDeepLink();
         await RefreshPoolPredictionsAsync();
+    }
+
+    // O fuso mudou (usuário salvou outro no perfil): reagrupa os dias e re-renderiza os horários.
+    private void OnTimeZoneChanged()
+    {
+        RebuildUi();
+        InvokeAsync(StateHasChanged);
     }
 
     // Quando o usuário chega via "Palpitar" da home (/calendar?match=…&pool=…), abre o dia/jogo certos e marca só o bolão indicado.
@@ -451,7 +461,7 @@
         _listSubtitle = $"{_viewMatches.Count} jogo{(_viewMatches.Count == 1 ? "" : "s")}" + (live > 0 ? $" · {live} ao vivo" : "");
     }
 
-    private static MatchItem MapToItem(MatchCalendarRowDto m)
+    private MatchItem MapToItem(MatchCalendarRowDto m)
     {
         var local = ToLocal(m.KickoffUtc);
         var center = $"{PtDates.AbbreviatedDay(local.DayOfWeek)} {local:dd} {PtDates.AbbreviatedMonth(local.Month)} · {local:HH:mm}";
@@ -485,16 +495,9 @@
             _ => "open",
         };
 
-    private static DateTime ToLocal(DateTime kickoffUtc)
-    {
-        var utc = kickoffUtc.Kind == DateTimeKind.Utc ? kickoffUtc : DateTime.SpecifyKind(kickoffUtc, DateTimeKind.Utc);
-        return TimeZoneInfo.ConvertTimeFromUtc(utc, TimeZoneInfo.Local);
-    }
+    private DateTime ToLocal(DateTime kickoffUtc) => Tz.ToLocal(kickoffUtc);
 
-    private static DateOnly GetLocalDate(DateTime kickoffUtc)
-    {
-        return DateOnly.FromDateTime(ToLocal(kickoffUtc));
-    }
+    private DateOnly GetLocalDate(DateTime kickoffUtc) => DateOnly.FromDateTime(ToLocal(kickoffUtc));
 
     private static string DayNamePt(DateOnly d) =>
         PtDates.AbbreviatedDay(d.ToDateTime(TimeOnly.MinValue).DayOfWeek).ToUpperInvariant();

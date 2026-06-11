@@ -1,8 +1,9 @@
 @* Match context for the predict flow; uses PageHeader so spacing matches other desktop pages. *@
+@inject IUserTimeZoneProvider Tz
 
 <PageHeader Title="@($"Palpite · {HomeCode} × {AwayCode}")"
             Eyebrow="@Phase"
-            Subtitle="@($"{KickoffUtc.ToLocalTime():dd/MM HH:mm} · BRT")">
+            Subtitle="@($"{Tz.ToLocal(KickoffUtc):dd/MM HH:mm} · {Tz.OffsetLabel}")">
     <Actions>
         <PredictionLockCountdownChip KickoffUtc="@KickoffUtc" />
     </Actions>

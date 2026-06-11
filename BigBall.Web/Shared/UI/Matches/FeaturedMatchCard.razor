@@ -1,5 +1,6 @@
 @using BigBall.Web.Shared.State
 @inject TeamBadgeCache TeamBadges
+@inject IUserTimeZoneProvider Tz
 
 <div class="featured-match-card">
     @if (Next is not null)
@@ -86,8 +87,8 @@
         get
         {
             if (Next is null) return "";
-            var local = ((DateTime)Next.KickoffUtc).ToLocalTime();
-            return $"{PtDates.AbbreviatedDay(local.DayOfWeek)} {local:dd} · {local:HH:mm} BRT";
+            var local = Tz.ToLocal((DateTime)Next.KickoffUtc);
+            return $"{PtDates.AbbreviatedDay(local.DayOfWeek)} {local:dd} · {local:HH:mm} {Tz.OffsetLabel}";
         }
     }
 

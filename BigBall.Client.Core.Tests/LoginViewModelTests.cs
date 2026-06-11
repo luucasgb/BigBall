@@ -103,6 +103,12 @@ public class LoginViewModelTests
             return Task.FromResult(new ProfileDto(Guid.NewGuid(), "joao.pereira@gmail.com", "João Pereira", null, DateTime.UtcNow));
         }
 
+        public Task<ProfileDto> UpdateMyProfileAsync(UpdateProfileRequest request, CancellationToken ct = default) =>
+            Task.FromResult(new ProfileDto(Guid.NewGuid(), "joao.pereira@gmail.com", "João Pereira", null, DateTime.UtcNow));
+
+        public Task<ProfileStatsDto> GetMyStatsAsync(CancellationToken ct = default) =>
+            Task.FromResult(new ProfileStatsDto(0, 0, Array.Empty<ScoringBandDto>(), Array.Empty<ProfileActivityRowDto>()));
+
         public Task DeleteAccountAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 

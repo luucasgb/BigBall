@@ -36,7 +36,7 @@ public static class AuthEndpoints
             var profile = await UpsertProfileAsync(db, auth.User, ct);
             return Results.Ok(new LoginResponse(
                 auth.AccessToken,
-                new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate)));
+                new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate, profile.TimeZoneId)));
         })
         .AllowAnonymous()
         .WithName("Login");
@@ -62,7 +62,7 @@ public static class AuthEndpoints
                 var profile = await UpsertProfileAsync(db, result.Session.User, ct);
                 var login = new LoginResponse(
                     result.Session.AccessToken,
-                    new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate));
+                    new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate, profile.TimeZoneId));
                 return Results.Ok(new RegisterResponse(login, RequiresEmailConfirmation: false));
             }
 
@@ -135,12 +135,8 @@ public static class AuthEndpoints
                     changed = true;
                 }
 
-                if (!string.IsNullOrWhiteSpace(displayFromJwt) &&
-                    !string.Equals(profile.DisplayName, displayFromJwt, StringComparison.Ordinal))
-                {
-                    profile.DisplayName = displayFromJwt;
-                    changed = true;
-                }
+                // DisplayName não é mais sincronizado do JWT após a criação do perfil:
+                // o usuário pode editá-lo no app (PUT /me) e essa escolha deve prevalecer.
 
                 if (!string.IsNullOrWhiteSpace(avatarFromJwt) &&
                     !string.Equals(profile.AvatarUrl, avatarFromJwt, StringComparison.Ordinal))
@@ -155,7 +151,7 @@ public static class AuthEndpoints
                 }
             }
 
-            return Results.Ok(new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate));
+            return Results.Ok(new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate, profile.TimeZoneId));
         })
         .RequireAuthorization()
         .WithName("GetMyProfile");
@@ -184,6 +180,75 @@ public static class AuthEndpoints
         })
         .RequireAuthorization()
         .WithName("DeleteMyAccount");
+
+        group.MapPut("/me", async (UpdateProfileRequest req, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+            var profile = await db.Profiles.FirstOrDefaultAsync(p => p.Id == userId, ct);
+            if (profile is null || profile.IsInactive)
+            {
+                return Results.NotFound(new { error = "Perfil não encontrado." });
+            }
+
+            var changed = false;
+
+            if (req.DisplayName is not null)
+            {
+                var name = req.DisplayName.Trim();
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    return Results.BadRequest(new { error = "O nome de exibição não pode ficar vazio." });
+                }
+                if (name.Length > 120)
+                {
+                    return Results.BadRequest(new { error = "O nome de exibição deve ter no máximo 120 caracteres." });
+                }
+                if (!string.Equals(profile.DisplayName, name, StringComparison.Ordinal))
+                {
+                    profile.DisplayName = name;
+                    changed = true;
+                }
+            }
+
+            if (req.TimeZoneId is not null)
+            {
+                var tz = req.TimeZoneId.Trim();
+                if (tz.Length == 0)
+                {
+                    return Results.BadRequest(new { error = "Fuso horário inválido." });
+                }
+                try
+                {
+                    _ = TimeZoneInfo.FindSystemTimeZoneById(tz);
+                }
+                catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
+                {
+                    return Results.BadRequest(new { error = $"Fuso horário desconhecido: {tz}." });
+                }
+                if (!string.Equals(profile.TimeZoneId, tz, StringComparison.Ordinal))
+                {
+                    profile.TimeZoneId = tz;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                await db.SaveChangesAsync(ct);
+            }
+
+            return Results.Ok(new ProfileDto(profile.Id, profile.Email, profile.DisplayName, profile.AvatarUrl, profile.CreateDate, profile.TimeZoneId));
+        })
+        .RequireAuthorization()
+        .WithName("UpdateMyProfile");
+
+        group.MapGet("/me/stats", async (ClaimsPrincipal user, ProfileStatsService stats, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+            return Results.Ok(await stats.BuildAsync(userId, ct));
+        })
+        .RequireAuthorization()
+        .WithName("GetMyProfileStats");
 
         return app;
     }

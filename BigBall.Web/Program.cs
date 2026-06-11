@@ -16,10 +16,12 @@ var apiBase = new Uri(builder.Configuration["ApiBase"]
 builder.Services.AddBigBallClientCore(apiBase);
 builder.Services.AddScoped<ITokenStore, LocalStorageTokenStore>();
 builder.Services.AddScoped<IUserProfileStore, LocalUserProfileStore>();
+builder.Services.AddScoped<IUserTimeZoneProvider, UserTimeZoneProvider>();
 builder.Services.AddScoped<IAppNavigator, BlazorAppNavigator>();
 builder.Services.AddScoped<IAuthSession, WebAuthSession>();
 builder.Services.AddScoped<ICreatePoolDialogService, CreatePoolDialogService>();
 builder.Services.AddScoped<IJoinPoolDialogService, JoinPoolDialogService>();
+builder.Services.AddScoped<IProfileEditDialogService, ProfileEditDialogService>();
 builder.Services.AddScoped<TeamBadgeCache>();
 
 await builder.Build().RunAsync();

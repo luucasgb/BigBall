@@ -36,6 +36,7 @@ try
     builder.Services.AddDbContext<BigBallDbContext>(options =>
         options.UseNpgsql(builder.Configuration.GetConnectionString("Supabase")));
     builder.Services.AddScoped<RankingService>();
+    builder.Services.AddScoped<ProfileStatsService>();
     builder.Services.AddHttpClient<SupabasePasswordAuthClient>();
 
     var corsOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>()

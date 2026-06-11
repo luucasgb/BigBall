@@ -64,7 +64,6 @@ coverage*.xml
 coverage*.info
 
 # Secrets / local config
-appsettings.Production.json
 appsettings.Local.json
 secrets.json
 *.pfx
@@ -90,7 +89,6 @@ wwwroot/_framework/
 
 # App settings
 appsettings.Development.json
-appsettings.*.json
 !appsettings.json
 
 # Any .csv

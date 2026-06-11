@@ -9,9 +9,9 @@ public class DeskSidebarActiveTests
     [InlineData("/", "dashboard")]
     [InlineData("calendar", "calendar")]
     [InlineData("profile", "profile")]
-    [InlineData("predict", "predict")]
+    [InlineData("about", "about")]
     [InlineData("pools/abc", "dashboard")]
-    [InlineData("pools/abc/predict/def", "predict")]
+    [InlineData("pools/abc/predict/def", "dashboard")]
     public void FromPath_MapsRelativePath(string relative, string expected) =>
         Assert.Equal(expected, DeskSidebarActive.FromPath(relative));
 

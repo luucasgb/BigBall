@@ -1,0 +1,33 @@
+name: Deploy BigBall.Web (Cloudflare Pages)
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  CLOUDFLARE_PAGES_PROJECT: bigball
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Publish Blazor WebAssembly
+        run: dotnet publish BigBall.Web/BigBall.Web.csproj -c Release -o publish
+
+      # O Cloudflare comprime na borda; as variantes pré-comprimidas só inflam o upload
+      - name: Remove pre-compressed variants
+        run: find publish/wwwroot -name '*.br' -delete && find publish/wwwroot -name '*.gz' -delete
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy publish/wwwroot --project-name=${{ env.CLOUDFLARE_PAGES_PROJECT }} --branch=main

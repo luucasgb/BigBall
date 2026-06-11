@@ -1,0 +1,17 @@
+**/bin
+**/obj
+**/logs
+.git
+.vs
+.vscode
+.cursor
+.claude
+.idea
+.github
+docs
+*.Tests
+BigBall.Web
+BigBall.Client.Core
+README.md
+Dockerfile
+.dockerignore

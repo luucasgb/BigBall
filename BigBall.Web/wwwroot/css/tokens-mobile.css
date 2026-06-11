@@ -83,6 +83,8 @@
   .bb-sidebar-wrap.open { transform: translateX(0); }
   .bb-sidebar-wrap .sidebar-frame {
     height: 100%;
+  }
+  .bb-sidebar-wrap.open .sidebar-frame {
     box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
   }
 

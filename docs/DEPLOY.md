@@ -46,12 +46,17 @@ Host=aws-0-<regiao>.pooler.supabase.com;Port=5432;Database=postgres;Username=pos
 
 ## 3. Frontend no Cloudflare Pages
 
+> **O Actions já dispara no merge para `master` — é esperado.** O workflow `deploy-web.yml` roda `on: push: branches: [master]`, então todo merge para `master` o aciona. Enquanto os passos abaixo não estiverem completos (secrets + projeto Pages), esse run **falha** (✗) — normal. Depois de concluí-los, vá em **Actions → Deploy BigBall.Web → Re-run jobs** (ou faça um novo push) para ficar verde.
+
 1. Crie conta em [dash.cloudflare.com](https://dash.cloudflare.com).
-2. Crie o projeto Pages (uma única vez, via direct upload): **Workers & Pages → Create → Pages → Upload assets**, nome `bigball` (se o nome estiver ocupado, escolha outro e atualize `CLOUDFLARE_PAGES_PROJECT` em `.github/workflows/deploy-web.yml`). Pode subir um arquivo qualquer só para criar o projeto — o workflow sobrescreve no primeiro deploy.
+2. Crie o projeto Pages (uma única vez, via direct upload). **Atenção à UI nova:** o botão **Create application** abre o fluxo "Create a Worker" ("Ship something new"), que é dos Workers, não do Pages. Para chegar no Pages:
+   - Nessa tela "Ship something new", clique no link **"Looking to deploy Pages? Get started"** no rodapé.
+   - Escolha **Upload assets** (direct upload) e dê o nome `bigball` (se o nome estiver ocupado, escolha outro e atualize `CLOUDFLARE_PAGES_PROJECT` em `.github/workflows/deploy-web.yml`).
+   - Pode subir um arquivo qualquer só para criar o projeto — o workflow sobrescreve no primeiro deploy.
 3. Crie um API token em **My Profile → API Tokens → Create Token**, com a permissão **Account → Cloudflare Pages → Edit**.
-4. No GitHub (`Settings → Secrets and variables → Actions → Secrets`), crie:
+4. No GitHub (`Settings → Secrets and variables → Actions → Secrets`), use **New repository secret** (não _environment secret_ — o `deploy-web.yml` não declara `environment:`, então só lê secrets de repositório) e crie:
    - `CLOUDFLARE_API_TOKEN` — o token do passo anterior
-   - `CLOUDFLARE_ACCOUNT_ID` — visível na URL do dashboard ou em Workers & Pages → Overview
+   - `CLOUDFLARE_ACCOUNT_ID` — visível na URL do dashboard ou em **Workers & Pages → Account Details → Account ID** (na lateral direita)
 5. Edite `BigBall.Web/wwwroot/appsettings.Production.json` com a URL do Railway (passo 2.4), **com barra final**:
 
 ```json

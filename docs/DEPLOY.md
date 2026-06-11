@@ -63,7 +63,9 @@ Host=aws-0-<regiao>.pooler.supabase.com;Port=5432;Database=postgres;Username=pos
 { "ApiBase": "https://<dominio-railway>.up.railway.app/" }
 ```
 
-6. Faça push no `master` — o workflow `deploy-web.yml` publica o site em `https://bigball.pages.dev`.
+> Esse arquivo é **versionado** (não está no `.gitignore`): ele só guarda o `ApiBase`, uma URL pública sem segredo, e precisa existir no repositório para entrar no `dotnet publish` do runner — o checkout do Actions é um clone limpo, então arquivos ignorados não chegam ao build. Os segredos de produção ficam só nas Variables do Railway (passo 2.3), nunca aqui.
+
+6. Faça commit e push no `master` — o workflow `deploy-web.yml` publica o site em `https://bigball.pages.dev`.
 7. Volte ao Railway e confira que `CorsOrigins__0` aponta exatamente para essa origem (https, sem barra final), senão o navegador bloqueia as chamadas à API.
 
 ## 4. Smoke test

@@ -53,7 +53,7 @@
                     </div>
                     <button class="bb-topbar-btn primary featured-match-pool-action"
                             @onclick="() => OnPredictionClick.InvokeAsync((Guid)pp.PoolId)">
-                        @(IsLocked ? "Ver" : pp.Prediction is null ? "Palpitar" : "Ver / editar")
+                        @(IsLocked ? "Ver" : pp.Prediction is null ? "Palpitar" : "Alterar")
                     </button>
                 </div>
             }
@@ -174,7 +174,8 @@
 
     .featured-match-card-footer {
         padding: 16px 24px;
-        border-top: 1px solid var(--line);
+        border: 1px solid var(--line);
+        border-radius: 16px;
         background: var(--bg-elev-2);
         display: flex;
         align-items: center;
@@ -221,5 +222,35 @@
 
     .featured-match-card-empty-text {
         color: var(--fg-3);
+    }
+
+    /* ─── Mobile (≤768px): bandeiras/“vs” menores para não estourar o card ───
+       Padding, gap e font-size do display são inline e venciam a media query
+       de tokens-mobile.css. O tamanho da bandeira vem de um style inline no
+       <img> (width = Size×1.5 = 132px), então só um !important o reduz.
+       Desktop permanece inalterado. */
+    @@media (max-width: 768px) {
+        .featured-match-card-display {
+            padding: 20px 16px;
+            gap: 10px;
+        }
+
+        .featured-match-vs {
+            font-size: 40px;
+            margin: 4px 0;
+        }
+
+        .featured-match-team-code {
+            font-size: 18px;
+        }
+
+        .featured-match-team {
+            min-width: 0;
+        }
+
+        .featured-match-card-display .flag-img {
+            width: 60px !important;
+            height: 40px !important;
+        }
     }
 </style>

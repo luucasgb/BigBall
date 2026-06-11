@@ -6,7 +6,6 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<DesktopTopbar />
 <div class="bb-content">
             <PageHeader Title="Início"
                         Eyebrow="BigBall · Copa do Mundo 2026"
@@ -109,5 +108,17 @@
     .home-sidebar-grow > :first-child {
         flex: 1;
         min-height: 0;
+    }
+
+    /* ─── Mobile (≤768px): coluna principal e sidebar empilhadas ─────────────
+       O grid 2fr/1fr e o padding lateral de 40px são inline, então venciam a
+       media query de tokens-mobile.css na cascata. Reaplicamos aqui, no mesmo
+       nível. Desktop permanece inalterado. */
+    @@media (max-width: 768px) {
+        .home-cols {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 0 16px 24px;
+            gap: 16px;
+        }
     }
 </style>

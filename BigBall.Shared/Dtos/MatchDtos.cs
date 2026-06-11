@@ -51,3 +51,18 @@ public sealed record ScoreDto(int Home, int Away);
 
 /// <summary>A user's prediction for one match within a single pool (null when not yet predicted).</summary>
 public sealed record PoolPredictionDto(Guid PoolId, ScoreDto? Prediction);
+
+/// <summary>One match as seen inside a pool: the member's own prediction alongside the real
+/// (reference) score. <see cref="ReferenceHome"/>/<see cref="ReferenceAway"/> are null until the
+/// match produces a result, in which case the UI shows the kickoff time instead.</summary>
+public sealed record PoolMatchRowDto(
+    Guid Id,
+    string Phase,
+    string? GroupLabel,
+    string HomeCode,
+    string AwayCode,
+    DateTime KickoffUtc,
+    string Status,
+    int? ReferenceHome,
+    int? ReferenceAway,
+    ScoreDto? MyPrediction);

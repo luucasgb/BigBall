@@ -26,6 +26,7 @@ public static class DeskSidebarActive
         return first switch
         {
             "calendar" => "calendar",
+            "discover" => "discover",
             "profile" => "profile",
             "about" => "about",
             _ => "dashboard",

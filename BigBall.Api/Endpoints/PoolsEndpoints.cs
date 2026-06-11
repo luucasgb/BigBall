@@ -147,6 +147,76 @@ public static class PoolsEndpoints
         })
         .WithName("GetMyPools");
 
+        group.MapGet("/public", async (ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+
+            var pools = await db.Pools
+                .AsNoTracking()
+                .Where(p => p.Visibility == PoolVisibility.Public)
+                .OrderByDescending(p => p.CreatedUtc)
+                .ToListAsync(ct);
+
+            var memberCounts = await db.PoolMemberships
+                .GroupBy(m => m.PoolId)
+                .Select(g => new { PoolId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.PoolId, x => x.Count, ct);
+
+            var myPoolIds = (await db.PoolMemberships
+                .Where(m => m.UserId == userId)
+                .Select(m => m.PoolId)
+                .ToListAsync(ct)).ToHashSet();
+
+            var adminIds = pools.Select(p => p.AdminUserId).Distinct().ToList();
+            var adminNames = await db.Profiles
+                .Where(p => adminIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.DisplayName, ct);
+
+            var result = pools.Select(p => new PublicPoolDto(
+                p.Id,
+                p.Name,
+                p.Description,
+                memberCounts.GetValueOrDefault(p.Id, 0),
+                p.PrizeDescription,
+                p.EntryCost,
+                adminNames.GetValueOrDefault(p.AdminUserId, "—"),
+                myPoolIds.Contains(p.Id))).ToList();
+
+            return Results.Ok(result);
+        })
+        .WithName("GetPublicPools");
+
+        group.MapPost("/{poolId:guid}/join", async (Guid poolId, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+
+            var pool = await db.Pools.FirstOrDefaultAsync(
+                p => p.Id == poolId && p.Visibility == PoolVisibility.Public, ct);
+            if (pool is null)
+            {
+                return Results.NotFound(new { error = "Bolão público não encontrado." });
+            }
+
+            var alreadyMember = await db.PoolMemberships.AnyAsync(
+                m => m.PoolId == pool.Id && m.UserId == userId, ct);
+            if (alreadyMember)
+            {
+                return Results.Conflict(new { error = "Você já participa deste bolão." });
+            }
+
+            db.PoolMemberships.Add(new PoolMembership
+            {
+                Id = Guid.NewGuid(),
+                PoolId = pool.Id,
+                UserId = userId,
+                Role = MembershipRole.Member,
+                JoinedUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new JoinPoolResponse(pool.Id, pool.Name));
+        })
+        .WithName("JoinPublicPool");
+
         group.MapPost("/join", async (JoinPoolRequest req, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
         {
             var userId = user.RequireUserId();
@@ -227,6 +297,53 @@ public static class PoolsEndpoints
                 rows));
         })
         .WithName("GetPoolDetail");
+
+        group.MapGet("/{poolId:guid}/matches", async (Guid poolId, ClaimsPrincipal user, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+            var poolExists = await db.Pools.AnyAsync(p => p.Id == poolId, ct);
+            if (!poolExists)
+            {
+                return Results.NotFound(new { error = "Bolão não encontrado." });
+            }
+
+            var isMember = await db.PoolMemberships.AnyAsync(m => m.PoolId == poolId && m.UserId == userId, ct);
+            if (!isMember)
+            {
+                return Results.Forbid();
+            }
+
+            var matches = await db.Matches
+                .AsNoTracking()
+                .OrderBy(m => m.KickoffUtc)
+                .ToListAsync(ct);
+
+            var myPredictions = await db.Predictions
+                .AsNoTracking()
+                .Where(p => p.UserId == userId && p.PoolId == poolId)
+                .ToDictionaryAsync(p => p.MatchId, ct);
+
+            var rows = matches
+                .Select(m =>
+                {
+                    myPredictions.TryGetValue(m.Id, out var pred);
+                    return new PoolMatchRowDto(
+                        m.Id,
+                        m.Phase.ToString(),
+                        m.GroupLabel,
+                        m.HomeCode,
+                        m.AwayCode,
+                        m.KickoffUtc,
+                        m.Status.ToString(),
+                        m.ReferenceHome,
+                        m.ReferenceAway,
+                        pred is null ? null : new ScoreDto(pred.Home, pred.Away));
+                })
+                .ToList();
+
+            return Results.Ok(rows);
+        })
+        .WithName("GetPoolMatches");
 
         return app;
     }

@@ -1,6 +1,9 @@
 @* Fixed left-nav sidebar shared across all desktop screens. *@
 @using BigBall.Client.Core.Abstractions
+@using BigBall.Web.Platform
 @inject IUserProfileStore UserProfileStore
+@inject ICreatePoolDialogService CreatePoolDialog
+@inject IJoinPoolDialogService JoinPoolDialog
 @implements IDisposable
 
 <SidebarFrame>
@@ -22,7 +25,14 @@
                     IsActive="@(Active == "calendar")" />
     <SidebarNavItem IconPath="@IconPaths.Globe"
                     Label="Descobrir"
-                    Title="Em breve" />
+                    Href="/discover"
+                    IsActive="@(Active == "discover")" />
+    <SidebarNavItem IconPath="@IconPaths.Plus"
+                    Label="Novo bolão"
+                    OnClickAction="@(() => CreatePoolDialog.Open())" />
+    <SidebarNavItem IconPath="@IconPaths.Lock"
+                    Label="Entrar com código"
+                    OnClickAction="@(() => JoinPoolDialog.Open())" />
 
     <SidebarNavSection>Conta</SidebarNavSection>
     <SidebarNavItem IconPath="@IconPaths.User"

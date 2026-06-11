@@ -60,3 +60,13 @@ public sealed record CreatePoolResponse(Guid PoolId, string? InviteCode);
 public sealed record JoinPoolRequest(string InviteCode);
 
 public sealed record JoinPoolResponse(Guid PoolId, string PoolName);
+
+public sealed record PublicPoolDto(
+    Guid Id,
+    string Name,
+    string? Description,
+    int MemberCount,
+    string? PrizeDescription,
+    string? EntryCost,
+    string AdminName,
+    bool IsMember);

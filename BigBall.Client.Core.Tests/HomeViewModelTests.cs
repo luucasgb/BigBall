@@ -101,10 +101,19 @@ public class HomeViewModelTests
         public Task<PoolDetailDto> GetPoolAsync(Guid poolId, CancellationToken ct = default) =>
             throw new NotSupportedException();
 
+        public Task<IReadOnlyList<PoolMatchRowDto>> GetPoolMatchesAsync(Guid poolId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
         public Task<CreatePoolResponse> CreatePoolAsync(CreatePoolRequest request, CancellationToken ct = default) =>
             throw new NotSupportedException();
 
         public Task<JoinPoolResponse> JoinPoolByInviteAsync(JoinPoolRequest request, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<PublicPoolDto>> GetPublicPoolsAsync(CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<JoinPoolResponse> JoinPublicPoolAsync(Guid poolId, CancellationToken ct = default) =>
             throw new NotSupportedException();
     }
 

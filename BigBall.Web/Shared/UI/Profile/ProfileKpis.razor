@@ -55,15 +55,21 @@
     }
 
     /* ─── Mobile (≤768px): 4 colunas → grade 2×2 dentro do card ──────────────
-       O grid-template-columns inline (repeat(4,1fr)) vencia a media query de
-       tokens-mobile.css na cascata, fazendo os KPIs estourarem a tela. As
-       demais regras mobile (borda superior, padding) vêm de tokens-mobile e já
-       se aplicam; aqui só corrigimos o que conflitava. Desktop inalterado. */
+       Este bloco de estilo carrega DEPOIS de tokens-mobile.css, então as
+       regras-base deste componente (padding-left/border-left) venciam a media query de
+       tokens-mobile na cascata: o painel ficava com borda/recuo À ESQUERDA
+       (deslocado para a direita) em vez de virar um divisor SUPERIOR. Por isso
+       repetimos aqui a virada esquerda→topo. Desktop inalterado. */
     @@media (max-width: 768px) {
         .profile-kpis {
             grid-template-columns: repeat(2, 1fr);
             gap: 16px 20px;
             min-width: 0;
+            padding-left: 0;
+            border-left: none;
+            border-top: 1px solid var(--line);
+            padding-top: 16px;
+            width: 100%;
         }
 
         .profile-kpi-item {

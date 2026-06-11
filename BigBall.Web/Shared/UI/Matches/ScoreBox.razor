@@ -1,5 +1,5 @@
 @* Tabular-numeric score cell. *@
-<div style="@Style">@(Value?.ToString() ?? "—")</div>
+<div class="bb-score-box" style="@Style">@(Value?.ToString() ?? "—")</div>
 
 @code {
     [Parameter] public int? Value { get; set; }

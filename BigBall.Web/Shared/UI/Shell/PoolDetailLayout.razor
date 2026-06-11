@@ -1,16 +1,21 @@
-<!-- Container layout for pool detail page (2-column grid with ranking and side panel) -->
-<div class="pool-detail-layout">
+<!-- Container layout for pool detail page (2-column grid with ranking and side panel).
+     When ShowSidebar is false the main content expands to full width. -->
+<div class="pool-detail-layout @(ShowSidebar ? "" : "no-sidebar")">
     <div class="pool-detail-main">
         @MainContent
     </div>
-    <div class="pool-detail-sidebar">
-        @SidebarContent
-    </div>
+    @if (ShowSidebar)
+    {
+        <div class="pool-detail-sidebar">
+            @SidebarContent
+        </div>
+    }
 </div>
 
 @code {
     [Parameter] public RenderFragment? MainContent { get; set; }
     [Parameter] public RenderFragment? SidebarContent { get; set; }
+    [Parameter] public bool ShowSidebar { get; set; } = true;
 }
 
 <style>
@@ -19,5 +24,21 @@
         display: grid;
         grid-template-columns: 1.6fr 1fr;
         gap: 20px;
+    }
+
+    .pool-detail-layout.no-sidebar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* ─── Mobile (≤768px): ranking e painel lateral empilhados ───────────────
+       O grid 1.6fr/1fr e o padding lateral de 40px são inline e venciam a media
+       query de tokens-mobile.css na cascata. Reaplicamos aqui, no mesmo nível.
+       Desktop permanece inalterado. */
+    @@media (max-width: 768px) {
+        .pool-detail-layout {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 16px 16px 24px;
+            gap: 16px;
+        }
     }
 </style>

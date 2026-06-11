@@ -1,0 +1,270 @@
+@page "/discover"
+@layout DesktopAppLayout
+@using System.Globalization
+@using BigBall.Client.Core.Abstractions
+@using BigBall.Shared.Dtos
+@inject IPoolsApi PoolsApi
+@inject ITokenStore TokenStore
+@inject NavigationManager Nav
+
+<PageHeader Title="Descobrir"
+            Eyebrow="Bolões públicos"
+            Subtitle="Encontre bolões abertos e participe com um clique." />
+
+<div class="bb-content">
+    @if (_isBusy)
+    {
+        <div class="discover-state">Carregando bolões…</div>
+    }
+    else if (_error is not null)
+    {
+        <div class="discover-state discover-error">@_error</div>
+    }
+    else if (_pools.Count == 0)
+    {
+        <div class="discover-state">Nenhum bolão público disponível no momento.</div>
+    }
+    else
+    {
+        <div class="discover-grid">
+            @foreach (var pool in _pools)
+            {
+                <div class="bb-dcard discover-card">
+                    <div class="discover-card-head">
+                        <div class="discover-card-icon">
+                            <Icon Path="@IconPaths.Trophy" Size="20" />
+                        </div>
+                        <div class="discover-card-titles">
+                            <div class="discover-card-name">@pool.Name</div>
+                            <div class="discover-card-admin">por @pool.AdminName</div>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(pool.Description))
+                    {
+                        <p class="discover-card-desc">@pool.Description</p>
+                    }
+
+                    <div class="discover-card-meta">
+                        <span class="discover-meta-item">
+                            <Icon Path="@IconPaths.Users" Size="14" />
+                            @pool.MemberCount @(pool.MemberCount == 1 ? "membro" : "membros")
+                        </span>
+                        @if (!string.IsNullOrWhiteSpace(pool.PrizeDescription))
+                        {
+                            <span class="discover-meta-item">
+                                <Icon Path="@IconPaths.Sparkle" Size="14" />
+                                @pool.PrizeDescription
+                            </span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(pool.EntryCost))
+                        {
+                            <span class="discover-meta-item">
+                                <Icon Path="@IconPaths.Lock" Size="14" />
+                                @pool.EntryCost
+                            </span>
+                        }
+                    </div>
+
+                    @if (_joinError.TryGetValue(pool.Id, out var jerr) && jerr is not null)
+                    {
+                        <div class="discover-card-err" role="alert">@jerr</div>
+                    }
+
+                    <div class="discover-card-actions">
+                        @if (pool.IsMember)
+                        {
+                            <button type="button" class="bb-btn bb-btn-secondary discover-card-btn"
+                                    @onclick="() => GoToPool(pool.Id)">
+                                Ver bolão
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="bb-btn bb-btn-primary discover-card-btn"
+                                    disabled="@(_joiningId == pool.Id)"
+                                    @onclick="() => JoinAsync(pool)">
+                                @(_joiningId == pool.Id ? "Entrando…" : "Participar")
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isBusy = true;
+    private string? _error;
+    private IReadOnlyList<PublicPoolDto> _pools = [];
+    private Guid? _joiningId;
+    private readonly Dictionary<Guid, string?> _joinError = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(await TokenStore.GetTokenAsync()))
+        {
+            Nav.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isBusy = true;
+        _error = null;
+        try
+        {
+            _pools = await PoolsApi.GetPublicPoolsAsync();
+        }
+        catch (Exception)
+        {
+            _error = "Não foi possível carregar os bolões públicos. Verifique a conexão e tente novamente.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task JoinAsync(PublicPoolDto pool)
+    {
+        if (_joiningId is not null) return;
+
+        _joiningId = pool.Id;
+        _joinError[pool.Id] = null;
+        try
+        {
+            var res = await PoolsApi.JoinPublicPoolAsync(pool.Id);
+            GoToPool(res.PoolId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _joinError[pool.Id] = ex.Message;
+        }
+        catch (Exception)
+        {
+            _joinError[pool.Id] = "Não foi possível entrar no bolão. Tente novamente.";
+        }
+        finally
+        {
+            _joiningId = null;
+        }
+    }
+
+    private void GoToPool(Guid poolId) =>
+        Nav.NavigateTo($"/pools/{poolId.ToString("D", CultureInfo.InvariantCulture)}");
+}
+
+<style>
+    .discover-state {
+        padding: 24px 40px;
+        color: var(--fg-2);
+    }
+
+    .discover-error {
+        color: var(--danger);
+    }
+
+    .discover-grid {
+        padding: 0 40px 40px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        align-items: start;
+    }
+
+    .discover-card {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .discover-card-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .discover-card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: color-mix(in oklab, var(--brand-strong) 18%, transparent);
+        color: var(--brand-strong);
+    }
+
+    .discover-card-titles {
+        min-width: 0;
+    }
+
+    .discover-card-name {
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+
+    .discover-card-admin {
+        font-size: 12px;
+        color: var(--fg-3);
+        margin-top: 2px;
+    }
+
+    .discover-card-desc {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--fg-2);
+        overflow-wrap: anywhere;
+    }
+
+    .discover-card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin-top: auto;
+    }
+
+    .discover-meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--fg-2);
+    }
+
+    .discover-card-err {
+        font-size: 12px;
+        color: var(--danger);
+    }
+
+    .discover-card-actions {
+        display: flex;
+    }
+
+    .discover-card-btn {
+        flex: 1;
+        min-height: 40px;
+    }
+
+    /* ─── Mobile (≤768px): coluna única e padding lateral de 16px ──────────── */
+    @@media (max-width: 768px) {
+        .discover-grid {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 0 16px 24px;
+            gap: 16px;
+        }
+
+        .discover-state {
+            padding: 16px;
+        }
+    }
+</style>

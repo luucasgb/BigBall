@@ -1,11 +1,14 @@
 @page "/about"
 @layout DesktopAppLayout
 
-<DesktopTopbar />
 <div class="bb-content">
     <PageHeader Title="Sobre" Eyebrow="Big Ball" />
 
     <div class="about-layout">
+        <div class="about-col">
+            <ScoringRulesCard />
+        </div>
+
         <div class="about-col">
             <div class="bb-dcard about-card">
                 <div class="about-card-header">
@@ -31,10 +34,6 @@
                     <li>Persistindo o empate, os participantes <strong>compartilham a mesma posição</strong> no ranking.</li>
                 </ol>
             </div>
-        </div>
-
-        <div class="about-col">
-            <ScoringRulesCard />
         </div>
     </div>
 </div>

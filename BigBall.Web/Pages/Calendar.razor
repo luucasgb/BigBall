@@ -9,8 +9,6 @@
 @inject IPredictionsApi PredictionsApi
 @inject IUserTimeZoneProvider Tz
 
-<DesktopTopbar />
-
         <PageHeader Title="Calendário"
                     Eyebrow="@_headerEyebrow">
             <Actions>
@@ -683,5 +681,28 @@
     .calendar-detail-empty-label {
         font-size: 13px;
         color: var(--fg-3);
+    }
+
+    /* ─── Mobile (≤768px): lista e detalhe empilhados, conteúdo flui ─────────
+       O grid 1.1fr/1fr, o padding lateral de 40px e os overflow:hidden/auto são
+       inline e venciam a media query de tokens-mobile.css. Reaplicamos aqui:
+       coluna única e overflow visível para o conteúdo fluir em vez de rolar
+       dentro de painéis. Desktop permanece inalterado. */
+    @@media (max-width: 768px) {
+        .calendar-layout {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 0 16px 24px;
+            gap: 16px;
+            overflow: visible;
+        }
+
+        .calendar-detail-card {
+            overflow: visible;
+        }
+
+        .calendar-detail-body {
+            overflow-y: visible;
+            padding: 16px 12px;
+        }
     }
 </style>

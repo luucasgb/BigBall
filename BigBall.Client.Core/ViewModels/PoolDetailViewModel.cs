@@ -28,6 +28,8 @@ public partial class PoolDetailViewModel : ViewModelBase
 
     public ObservableCollection<RankingRowDto> Ranking { get; } = new();
 
+    public ObservableCollection<PoolMatchRowDto> Matches { get; } = new();
+
     public RankingRowDto? MyRow => Ranking.FirstOrDefault(r => r.IsMe);
 
     public bool HasTieWithMe => MyRow?.TieGroupId is not null
@@ -46,6 +48,10 @@ public partial class PoolDetailViewModel : ViewModelBase
         foreach (var row in detail.Ranking) Ranking.Add(row);
         OnPropertyChanged(nameof(MyRow));
         OnPropertyChanged(nameof(HasTieWithMe));
+
+        var matches = await _pools.GetPoolMatchesAsync(PoolId, token).ConfigureAwait(false);
+        Matches.Clear();
+        foreach (var match in matches) Matches.Add(match);
     }, ct);
 
     [RelayCommand]

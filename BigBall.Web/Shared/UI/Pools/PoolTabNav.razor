@@ -49,4 +49,13 @@
         border-bottom-color: var(--brand-strong);
         font-weight: 600;
     }
+
+    /* ─── Mobile (≤768px): alinha os tabs ao padding lateral de 16px ─────────
+       O padding 0 40px é inline; no mobile usamos 16px para casar com o resto
+       da página. Desktop permanece inalterado. */
+    @@media (max-width: 768px) {
+        .pool-tab-nav {
+            padding: 0 16px;
+        }
+    }
 </style>

@@ -1,5 +1,7 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Nav
+@inject BigBall.Web.Platform.ICreatePoolDialogService CreatePoolDialog
+@inject BigBall.Web.Platform.IJoinPoolDialogService JoinPoolDialog
 @implements IDisposable
 
 <div class="bb-desk theme-dark">
@@ -29,12 +31,25 @@
     protected override void OnInitialized()
     {
         Nav.LocationChanged += OnLocationChanged;
+        // A modal (z-index 1000) abre por trás do drawer (1100) no mobile; fechamos o
+        // drawer ao abrir um diálogo a partir dos atalhos "Novo bolão"/"Entrar com código".
+        CreatePoolDialog.StateChanged += OnDialogStateChanged;
+        JoinPoolDialog.StateChanged += OnDialogStateChanged;
         _active = DeskSidebarActive.FromPath(Nav.ToBaseRelativePath(Nav.Uri));
     }
 
     private void OpenDrawer() => _drawerOpen = true;
 
     private void CloseDrawer() => _drawerOpen = false;
+
+    private void OnDialogStateChanged()
+    {
+        if ((CreatePoolDialog.IsOpen || JoinPoolDialog.IsOpen) && _drawerOpen)
+        {
+            _drawerOpen = false;
+            InvokeAsync(StateHasChanged);
+        }
+    }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
@@ -46,5 +61,7 @@
     public void Dispose()
     {
         Nav.LocationChanged -= OnLocationChanged;
+        CreatePoolDialog.StateChanged -= OnDialogStateChanged;
+        JoinPoolDialog.StateChanged -= OnDialogStateChanged;
     }
 }

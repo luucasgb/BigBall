@@ -15,12 +15,21 @@
     [Parameter] public bool IsActive { get; set; }
     [Parameter] public string? Title { get; set; }
 
-    bool IsEffectivelyDisabled => string.IsNullOrEmpty(Href);
+    /// <summary>When set, the row triggers this action instead of navigating (e.g. opening a dialog).</summary>
+    [Parameter] public EventCallback OnClickAction { get; set; }
 
-    void OnClick()
+    bool IsEffectivelyDisabled => string.IsNullOrEmpty(Href) && !OnClickAction.HasDelegate;
+
+    Task OnClick()
     {
-        if (IsEffectivelyDisabled) return;
-        Nav.NavigateTo(Href!);
+        if (OnClickAction.HasDelegate)
+        {
+            return OnClickAction.InvokeAsync();
+        }
+
+        if (string.IsNullOrEmpty(Href)) return Task.CompletedTask;
+        Nav.NavigateTo(Href);
+        return Task.CompletedTask;
     }
 }
 

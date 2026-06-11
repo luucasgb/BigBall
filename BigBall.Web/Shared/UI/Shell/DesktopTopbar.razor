@@ -1,9 +1,0 @@
-@* Top bar for desktop screens: action buttons. *@
-@inject ICreatePoolDialogService CreatePoolDialog
-@inject IJoinPoolDialogService JoinPoolDialog
-<div class="bb-topbar">
-    <div class="bb-topbar-actions">
-        <button type="button" class="bb-topbar-btn primary" @onclick="() => JoinPoolDialog.Open()"><Icon Path="@IconPaths.Lock" Size="16" /> Entrar com código</button>
-        <button type="button" class="bb-topbar-btn primary" @onclick="() => CreatePoolDialog.Open()"><Icon Path="@IconPaths.Plus" Size="16" /> Novo bolão</button>
-    </div>
-</div>

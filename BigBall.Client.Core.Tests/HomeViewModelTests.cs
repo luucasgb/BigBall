@@ -54,7 +54,7 @@ public class HomeViewModelTests
     }
 
     [Fact]
-    public async Task OpenPrediction_NavigatesToPoolSpecificPredictRoute()
+    public async Task OpenPrediction_NavigatesToCalendarWithMatchAndPoolSelected()
     {
         var matchId = Guid.NewGuid();
         var pool = BuildPool("Teste", matchId, Kickoff, null);
@@ -64,7 +64,7 @@ public class HomeViewModelTests
 
         vm.OpenPredictionCommand.Execute(pool.Id);
 
-        Assert.Equal($"/pools/{pool.Id}/predict/{matchId}", navigator.LastRoute);
+        Assert.Equal($"/calendar?match={matchId}&pool={pool.Id}", navigator.LastRoute);
     }
 
     [Fact]

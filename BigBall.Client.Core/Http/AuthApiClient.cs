@@ -44,4 +44,14 @@ public sealed class AuthApiClient : IAuthApi
         using var response = await _http.GetAsync("api/auth/me", ct).ConfigureAwait(false);
         return await response.ReadRequiredAsync<ProfileDto>(ct).ConfigureAwait(false);
     }
+
+    public async Task DeleteAccountAsync(CancellationToken ct = default)
+    {
+        using var response = await _http.DeleteAsync("api/auth/me", ct).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            var msg = await response.TryReadErrorMessageAsync(ct).ConfigureAwait(false);
+            throw new InvalidOperationException(msg ?? $"Não foi possível excluir a conta ({(int)response.StatusCode}).");
+        }
+    }
 }

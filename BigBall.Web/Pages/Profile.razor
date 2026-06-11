@@ -73,16 +73,71 @@
                         Title="Conta"
                         Items="@_accountSettingsItems" />
 
-                    <button type="button"
-                            class="bb-btn bb-btn-ghost logout-btn"
-                            disabled="@_loggingOut"
-                            @onclick="LogoutAsync">
-                        Sair da conta
-                    </button>
+                    <div class="profile-account-actions">
+                        <button type="button"
+                                class="bb-btn bb-btn-ghost account-action-btn"
+                                disabled="@_loggingOut"
+                                @onclick="LogoutAsync">
+                            Sair da conta
+                        </button>
+                        <button type="button"
+                                class="bb-btn bb-btn-ghost account-action-btn danger"
+                                @onclick="OpenDeleteModal">
+                            Excluir dados
+                        </button>
+                    </div>
                 </div>
             </div>
             }
 </div>
+
+@if (_showDeleteModal)
+{
+    <div class="bb-modal-backdrop" @onclick="CloseDeleteModal" @onkeydown="OnDeleteKeyDown" tabindex="-1">
+        <div class="bb-modal-panel" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-labelledby="bb-delete-account-title">
+            <div class="bb-modal-header">
+                <h2 class="bb-modal-title" id="bb-delete-account-title">Excluir conta e dados</h2>
+                <button type="button" class="bb-modal-close bb-topbar-btn" disabled="@_deleting" @onclick="CloseDeleteModal" aria-label="Fechar">×</button>
+            </div>
+
+            <div class="bb-delete-account-body">
+                <p class="bb-delete-warn">
+                    Esta ação é <strong>permanente</strong>. Sua conta e todos os seus dados pessoais
+                    (e-mail, nome de exibição e avatar) serão <strong>excluídos definitivamente</strong>.
+                </p>
+                <p class="bb-delete-note">
+                    Seus palpites continuarão contando para a pontuação dos bolões, mas você aparecerá
+                    apenas como <strong>“Usuário excluído”</strong>. Não será possível recuperar a conta.
+                </p>
+
+                <label class="bb-field">
+                    <span class="bb-field-l">Para confirmar, digite <strong>EXCLUIR</strong></span>
+                    <input class="bb-input" autocomplete="off" disabled="@_deleting"
+                           @bind="_deleteConfirmText" @bind:event="oninput" placeholder="EXCLUIR" />
+                </label>
+
+                @if (!string.IsNullOrEmpty(_deleteError))
+                {
+                    <div class="bb-modal-err" role="alert">@_deleteError</div>
+                }
+
+                <div class="bb-modal-actions">
+                    <button type="button" class="bb-btn bb-btn-secondary" disabled="@_deleting" @onclick="CloseDeleteModal">Cancelar</button>
+                    <button type="button" class="bb-btn bb-btn-danger" disabled="@(_deleting || !DeleteConfirmed)" @onclick="DeleteAccountAsync">
+                        @if (_deleting)
+                        {
+                            <text>Excluindo…</text>
+                        }
+                        else
+                        {
+                            <text>Excluir definitivamente</text>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private bool _isBusy = true;
@@ -94,6 +149,14 @@
     private string? _adminOfLabel;
     private string _memberLabel = string.Empty;
     private bool _loggingOut;
+
+    private bool _showDeleteModal;
+    private bool _deleting;
+    private string _deleteConfirmText = string.Empty;
+    private string? _deleteError;
+
+    private bool DeleteConfirmed =>
+        string.Equals(_deleteConfirmText.Trim(), "EXCLUIR", StringComparison.Ordinal);
 
     protected override async Task OnInitializedAsync()
     {
@@ -146,8 +209,7 @@
     [
         new(IconPaths.User, "Nome de exibição", p.DisplayName),
         new(IconPaths.Bell, "Notificações", "Fechamento no apito · resultados"),
-        new(IconPaths.Globe, "Fuso horário", "America/São_Paulo (BRT)"),
-        new(IconPaths.Lock, "Privacidade & dados", "LGPD · exportar · excluir")
+        new(IconPaths.Globe, "Fuso horário", "America/São_Paulo (BRT)")
     ];
 
     private static IReadOnlyList<ProfileKpis.KpiItem> BuildKpiItems(IReadOnlyList<MyPoolDto> pools)
@@ -203,6 +265,51 @@
         }
     }
 
+    private void OpenDeleteModal()
+    {
+        _deleteConfirmText = string.Empty;
+        _deleteError = null;
+        _showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        if (_deleting) return;
+        _showDeleteModal = false;
+    }
+
+    private void OnDeleteKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            CloseDeleteModal();
+        }
+    }
+
+    private async Task DeleteAccountAsync()
+    {
+        if (_deleting || !DeleteConfirmed) return;
+        _deleting = true;
+        _deleteError = null;
+        try
+        {
+            await AuthApi.DeleteAccountAsync();
+            await AuthSession.LogoutAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _deleteError = ex.Message;
+        }
+        catch (Exception)
+        {
+            _deleteError = "Não foi possível excluir a conta. Tente novamente.";
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
+
     private static readonly IReadOnlyList<ScoringBandsCard.BandItem> ScoringBandItems =
     [
         new(20, "Placar exato", 0),
@@ -235,11 +342,44 @@
         gap: 20px;
     }
 
-    .logout-btn {
-        width: 100%;
+    .profile-account-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .account-action-btn {
+        flex: 1;
         height: 44px;
+    }
+
+    .account-action-btn.danger {
         color: var(--danger);
         border-color: color-mix(in oklab, var(--danger) 35%, var(--line));
+    }
+
+    .bb-btn-danger {
+        background: var(--danger);
+        color: #fff;
+    }
+
+    .bb-btn-danger:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    .bb-delete-account-body {
+        padding: 16px 20px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .bb-delete-warn,
+    .bb-delete-note {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--fg-2);
     }
 
     .profile-loading,

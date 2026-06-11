@@ -8,6 +8,14 @@ public static class DeskSidebarActive
     public static string FromPath(string relativePath)
     {
         var path = (relativePath ?? string.Empty).Trim('/');
+
+        // Strip any query string or fragment so they don't get folded into the first segment.
+        var cut = path.AsSpan().IndexOfAny('?', '#');
+        if (cut >= 0)
+        {
+            path = path[..cut];
+        }
+
         if (string.IsNullOrEmpty(path))
         {
             return "dashboard";

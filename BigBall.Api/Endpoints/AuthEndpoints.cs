@@ -27,6 +27,12 @@ public static class AuthEndpoints
                 return Results.Unauthorized();
             }
 
+            var existingProfile = await db.Profiles.FirstOrDefaultAsync(p => p.Id == auth.User.Id, ct);
+            if (existingProfile is not null && existingProfile.IsInactive)
+            {
+                return Results.Json(new { error = "Esta conta foi excluída." }, statusCode: StatusCodes.Status403Forbidden);
+            }
+
             var profile = await UpsertProfileAsync(db, auth.User, ct);
             return Results.Ok(new LoginResponse(
                 auth.AccessToken,
@@ -97,6 +103,12 @@ public static class AuthEndpoints
             var avatarFromJwt = ResolveJwtAvatarUrl(user);
 
             var profile = await db.Profiles.FirstOrDefaultAsync(p => p.Id == userId, ct);
+            if (profile is not null && profile.IsInactive)
+            {
+                // Conta excluída (LGPD): não repopular dados anonimizados a partir do JWT residual.
+                return Results.Json(new { error = "Esta conta foi excluída." }, statusCode: StatusCodes.Status403Forbidden);
+            }
+
             if (profile is null)
             {
                 profile = new BigBall.Domain.Entities.Profile
@@ -147,6 +159,31 @@ public static class AuthEndpoints
         })
         .RequireAuthorization()
         .WithName("GetMyProfile");
+
+        group.MapDelete("/me", async (ClaimsPrincipal user, SupabasePasswordAuthClient supabase, BigBallDbContext db, CancellationToken ct) =>
+        {
+            var userId = user.RequireUserId();
+
+            var profile = await db.Profiles.FirstOrDefaultAsync(p => p.Id == userId, ct);
+            if (profile is not null && !profile.IsInactive)
+            {
+                // Soft-delete + anonimização (LGPD). A linha é mantida para preservar palpites e rankings dos bolões.
+                profile.Email = $"deleted-{userId:N}@deleted.bigball";
+                profile.DisplayName = "Usuário excluído";
+                profile.AvatarUrl = null;
+                profile.CreateDate = DateTime.UnixEpoch;
+                profile.IsInactive = true;
+                profile.DeactivationDate = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+            }
+
+            // Exclusão real no provedor de identidade (best-effort): impede login futuro e remove o e-mail do auth.users.
+            await supabase.DeleteAuthUserAsync(userId, ct);
+
+            return Results.Ok();
+        })
+        .RequireAuthorization()
+        .WithName("DeleteMyAccount");
 
         return app;
     }

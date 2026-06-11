@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace BigBall.Api.Auth;
@@ -15,11 +16,48 @@ public sealed class SupabasePasswordAuthClient
 
     private readonly HttpClient _http;
     private readonly SupabaseAuthOptions _options;
+    private readonly ILogger<SupabasePasswordAuthClient> _logger;
 
-    public SupabasePasswordAuthClient(HttpClient http, IOptions<SupabaseAuthOptions> options)
+    public SupabasePasswordAuthClient(HttpClient http, IOptions<SupabaseAuthOptions> options, ILogger<SupabasePasswordAuthClient> logger)
     {
         _http = http;
         _options = options.Value;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Apaga definitivamente o usuário do Supabase Auth via admin API (<c>DELETE /auth/v1/admin/users/{id}</c>).
+    /// Exige a service-role key. Best-effort: loga e retorna <c>false</c> em caso de falha, sem relançar.
+    /// </summary>
+    public async Task<bool> DeleteAuthUserAsync(Guid userId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(_options.ServiceRoleKey))
+        {
+            _logger.LogWarning("Supabase ServiceRoleKey não configurada; não foi possível excluir o usuário {UserId} do auth.users.", userId);
+            return false;
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Delete, $"{_options.AdminUsersUrl}/{userId:D}");
+            request.Headers.TryAddWithoutValidation("apikey", _options.ServiceRoleKey);
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {_options.ServiceRoleKey}");
+
+            using var response = await _http.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            var body = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogError("Falha ao excluir usuário {UserId} do Supabase Auth: {StatusCode} {Body}", userId, (int)response.StatusCode, body);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao chamar o admin API do Supabase para excluir o usuário {UserId}.", userId);
+            return false;
+        }
     }
 
     public async Task<SupabasePasswordSignInResponse?> SignInAsync(string email, string password, CancellationToken ct)

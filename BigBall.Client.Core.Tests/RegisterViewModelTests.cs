@@ -140,6 +140,8 @@ public class RegisterViewModelTests
             GetMyProfileCallCount++;
             return Task.FromResult(new ProfileDto(Guid.NewGuid(), "x@y.com", "X", null, DateTime.UtcNow));
         }
+
+        public Task DeleteAccountAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeTokenStore : ITokenStore

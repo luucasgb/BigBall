@@ -10,4 +10,10 @@ public sealed class Profile
 
     /// <summary>Instante em que o perfil de produto foi criado (alinhado a <c>auth.users.created_at</c> quando o trigger Supabase insere a linha).</summary>
     public DateTime CreateDate { get; set; }
+
+    /// <summary>Verdadeiro quando o usuário excluiu sua conta (LGPD). A linha é mantida e anonimizada para preservar palpites e rankings dos bolões.</summary>
+    public bool IsInactive { get; set; }
+
+    /// <summary>Instante em que a conta foi desativada/anonimizada; nulo enquanto a conta está ativa.</summary>
+    public DateTime? DeactivationDate { get; set; }
 }

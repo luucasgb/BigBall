@@ -28,6 +28,8 @@ public sealed class BigBallDbContext : DbContext
             entity.Property(x => x.AvatarUrl).HasColumnName("avatar_url").HasMaxLength(512);
             entity.Property(x => x.IsPlatformAdmin).HasColumnName("is_platform_admin");
             entity.Property(x => x.CreateDate).HasColumnName("create_date");
+            entity.Property(x => x.IsInactive).HasColumnName("is_inactive").HasDefaultValue(false);
+            entity.Property(x => x.DeactivationDate).HasColumnName("deactivation_date");
             entity.HasIndex(x => x.Email).IsUnique();
         });
 

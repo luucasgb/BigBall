@@ -3,8 +3,10 @@
 @using System.Globalization
 @using BigBall.Shared.Dtos
 @using BigBall.Shared.WorldCup
+@implements IDisposable
 @inject IMatchesApi MatchesApi
 @inject IPoolsApi PoolsApi
+@inject IPredictionsApi PredictionsApi
 
 <DesktopTopbar Placeholder="Buscar partida ou seleção…" />
 
@@ -76,7 +78,7 @@
                         <PredictionInput HomePrediction="@PredHome"
                                          AwayPrediction="@PredAway"
                                          IsLocked="@IsMatchLocked(am)"
-                                         IsBusy="false"
+                                         IsBusy="@_saving"
                                          HomePredictionChanged="v => PredHome = v"
                                          AwayPredictionChanged="v => PredAway = v" />
                         <PoolSelector>
@@ -96,9 +98,18 @@
                                 }
                             }
                         </PoolSelector>
-                        <CalendarDetailActions SelectedPoolCount="@_poolSelections.Count(p => p.Selected)"
-                                               OnClear="ClearPrediction"
-                                               OnSave="SavePrediction" />
+                        <div class="calendar-detail-footer">
+                            @if (_saveFeedback is { } fb)
+                            {
+                                <div class="calendar-save-feedback-row" @key="_feedbackSeq">
+                                    <span class="calendar-save-feedback-spacer"></span>
+                                    <p class="calendar-save-feedback @(fb.IsError ? "is-error" : "is-ok")" role="status">@fb.Message</p>
+                                </div>
+                            }
+                            <CalendarDetailActions SelectedPoolCount="@_poolSelections.Count(p => p.Selected)"
+                                                   OnClear="ClearPrediction"
+                                                   OnSave="SavePrediction" />
+                        </div>
                     </div>
                 </div>
             }
@@ -127,6 +138,61 @@
     private string _headerEyebrow = "Copa do Mundo 2026";
     private string _listTitle = "Jogos";
     private string _listSubtitle = "";
+
+    private bool _saving;
+    private SaveFeedback? _saveFeedback;
+    private int _feedbackSeq;
+    private CancellationTokenSource? _feedbackCts;
+
+    private sealed record SaveFeedback(string Message, bool IsError);
+
+    // Mostra a notificação (com @key novo para reiniciar a animação) e a remove após o fade-out.
+    private void SetFeedback(string message, bool isError)
+    {
+        _feedbackCts?.Cancel();
+        _feedbackCts?.Dispose();
+        _saveFeedback = new SaveFeedback(message, isError);
+        _feedbackSeq++;
+
+        var cts = new CancellationTokenSource();
+        _feedbackCts = cts;
+        _ = DismissFeedbackAfterDelayAsync(cts.Token);
+    }
+
+    private async Task DismissFeedbackAfterDelayAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(2400, ct).ConfigureAwait(false);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        _saveFeedback = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearFeedback()
+    {
+        _feedbackCts?.Cancel();
+        _feedbackCts?.Dispose();
+        _feedbackCts = null;
+        _saveFeedback = null;
+    }
+
+    public void Dispose()
+    {
+        _feedbackCts?.Cancel();
+        _feedbackCts?.Dispose();
+    }
+
+    [Parameter, SupplyParameterFromQuery(Name = "match")]
+    public Guid? DeepLinkMatchId { get; set; }
+
+    [Parameter, SupplyParameterFromQuery(Name = "pool")]
+    public Guid? DeepLinkPoolId { get; set; }
 
     private string SelectedDay { get; set; } = "";
 
@@ -170,7 +236,33 @@
     protected override async Task OnInitializedAsync()
     {
         await Task.WhenAll(LoadAsync(), LoadMyPoolsAsync());
+        ApplyDeepLink();
         await RefreshPoolPredictionsAsync();
+    }
+
+    // Quando o usuário chega via "Palpitar" da home (/calendar?match=…&pool=…), abre o dia/jogo certos e marca só o bolão indicado.
+    private void ApplyDeepLink()
+    {
+        if (DeepLinkMatchId is not { } matchId) return;
+
+        var match = _loaded.FirstOrDefault(m => m.Id == matchId);
+        if (match is null) return;
+
+        SelectedDay = GetLocalDate(match.KickoffUtc).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        RebuildViewMatches();
+        foreach (var m in _viewMatches)
+        {
+            m.IsSelected = m.Id == matchId;
+        }
+        UpdateChrome();
+
+        if (DeepLinkPoolId is { } poolId && _poolSelections.Any(p => p.PoolId == poolId))
+        {
+            foreach (var sel in _poolSelections)
+            {
+                sel.Selected = sel.PoolId == poolId;
+            }
+        }
     }
 
     private async Task RefreshPoolPredictionsAsync()
@@ -426,9 +518,76 @@
         {
             sel.Selected = false;
         }
+        ClearFeedback();
     }
 
-    private void SavePrediction() { }
+    private async Task SavePrediction()
+    {
+        if (_saving) return;
+
+        if (ActiveMatch is not { } am)
+        {
+            return;
+        }
+        if (IsMatchLocked(am))
+        {
+            SetFeedback("As apostas para este jogo já fecharam.", isError: true);
+            return;
+        }
+
+        var targets = _poolSelections.Where(p => p.Selected).ToList();
+        if (targets.Count == 0)
+        {
+            SetFeedback("Selecione ao menos um bolão para salvar o palpite.", isError: true);
+            return;
+        }
+
+        _saving = true;
+        ClearFeedback();
+        var failures = 0;
+        var locked = false;
+        try
+        {
+            var request = new UpsertPredictionRequest(PredHome, PredAway, null);
+            foreach (var pool in targets)
+            {
+                try
+                {
+                    await PredictionsApi.UpsertAsync(pool.PoolId, am.Id, request).ConfigureAwait(false);
+                }
+                catch (PredictionLockedException)
+                {
+                    locked = true;
+                    failures = targets.Count;
+                    break;
+                }
+                catch (Exception)
+                {
+                    failures++;
+                }
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        await RefreshPoolPredictionsAsync();
+
+        var saved = targets.Count;
+        if (locked)
+        {
+            SetFeedback("As apostas para este jogo já fecharam.", isError: true);
+        }
+        else if (failures == 0)
+        {
+            SetFeedback($"Palpite salvo em {saved} bolã{(saved == 1 ? "o" : "os")}.", isError: false);
+        }
+        else
+        {
+            SetFeedback($"Não foi possível salvar em {failures} de {saved} bolões.", isError: true);
+        }
+    }
 
     private static bool IsMatchLocked(MatchItem m) => DateTime.UtcNow >= AsUtc(m.KickoffUtc);
 }
@@ -449,6 +608,41 @@
         font-size: 13px;
         color: var(--fg-3);
         line-height: 1.4;
+    }
+
+    .calendar-detail-footer {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Mirror the actions row (Limpar flex:1 · Salvar flex:2) so the message centers over the save button. */
+    .calendar-save-feedback-row {
+        display: flex;
+        gap: 10px;
+        padding-bottom: 8px;
+    }
+
+    .calendar-save-feedback-spacer {
+        flex: 1;
+    }
+
+    .calendar-save-feedback {
+        flex: 2;
+        margin: 0;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.4;
+        animation: calendar-save-feedback-inout 2.4s ease forwards;
+    }
+
+    .calendar-save-feedback.is-ok {
+        color: var(--success);
+    }
+
+    .calendar-save-feedback.is-error {
+        color: var(--danger, #e85);
     }
 
     .calendar-layout {

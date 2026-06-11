@@ -58,7 +58,8 @@ public partial class HomeViewModel : ViewModelBase
     private void OpenPrediction(Guid poolId)
     {
         if (FeaturedNextMatch is not { } match) return;
-        _navigator.NavigateTo($"/pools/{poolId}/predict/{match.Id}");
+        // Palpitar acontece no calendário (a página dedicada de palpite foi removida); abre o jogo e o bolão já selecionados.
+        _navigator.NavigateTo($"/calendar?match={match.Id}&pool={poolId}");
     }
 }
 

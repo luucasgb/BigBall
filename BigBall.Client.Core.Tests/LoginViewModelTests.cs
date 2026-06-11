@@ -102,6 +102,8 @@ public class LoginViewModelTests
             GetMyProfileCallCount++;
             return Task.FromResult(new ProfileDto(Guid.NewGuid(), "joao.pereira@gmail.com", "João Pereira", null, DateTime.UtcNow));
         }
+
+        public Task DeleteAccountAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeTokenStore : ITokenStore

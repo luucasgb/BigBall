@@ -186,6 +186,14 @@
   background: var(--danger);
 }
 
+/* transient "palpite salvo" toast: fade in, hold, fade out (~2.4s total) */
+@keyframes calendar-save-feedback-inout {
+  0% { opacity: 0; transform: translateY(4px); }
+  10% { opacity: 1; transform: translateY(0); }
+  82% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-2px); }
+}
+
 /* button */
 .bb-btn {
   height: 48px;

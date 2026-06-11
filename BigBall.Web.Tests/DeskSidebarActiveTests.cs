@@ -12,6 +12,9 @@ public class DeskSidebarActiveTests
     [InlineData("about", "about")]
     [InlineData("pools/abc", "dashboard")]
     [InlineData("pools/abc/predict/def", "dashboard")]
+    [InlineData("calendar?match=123&pool=456", "calendar")]
+    [InlineData("/calendar?match=123", "calendar")]
+    [InlineData("profile#section", "profile")]
     public void FromPath_MapsRelativePath(string relative, string expected) =>
         Assert.Equal(expected, DeskSidebarActive.FromPath(relative));
 
